@@ -1,0 +1,12 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\XFS\SERVICE_PROVIDERS\PC/SC_TO_CEN/XFS_BRIDGE]
+"dllname"="PCSC-to-CENXFS_bridgeSPI.dll"
+"vendor_name"="Mingun"
+"version"="0.0.0.1"
+
+
+[HKEY_USERS\.DEFAULT\XFS\LOGICAL_SERVICES\PC/SC_TO_CEN/XFS_BRIDGE]
+"class"="IDC"
+"DeviceName"="Bridge from PC/SC standard to CEN/XFS standard for CardReaders"
+"provider"="PC/SC_TO_CEN/XFS_BRIDGE"
