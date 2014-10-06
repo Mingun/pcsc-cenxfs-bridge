@@ -214,6 +214,8 @@ class Card {
     SCARDHANDLE hCard;
     /// Протокол, по которому работает карта.
     DWORD dwActiveProtocol;
+    HSERVICE hService;
+    str::string readerName;
 
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class PCSC;
@@ -222,18 +224,34 @@ private:
     @param hContext Ресурсный менеджер подсистемы PC/SC.
     @param readerName
     */
-    Card(SCARDCONTEXT hContext, const char* readerName) {
-        LONG r = SCardConnect(hContext, readerName, SCARD_SHARE_SHARED,
-            // У нас нет предпочитаемого протокола, работаеем с тем, что дают
+    Card(HSERVICE hService, SCARDCONTEXT hContext, const char* readerName) : hService(hService), readerName(readerName) {
+        Status st = SCardConnect(hContext, readerName, SCARD_SHARE_SHARED,
+            // У нас нет предпочитаемого протокола, работаем с тем, что дают
             SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
             // Получаем хендл карты и выбранный протокол.
             &hCard, &dwActiveProtocol
         );
+        std::stringstream ss;
+        ss << "Connect to card reader '" << readerName << "', protocol=" << dwActiveProtocol << ": " << st;
+        WFMOutputTraceData(ss.c_str());
     }
 public:
     ~Card() {
         // При закрытии соединения ничего не делаем с карточкой, оставляем ее в считывателе.
-        LONG r = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+        Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+        std::stringstream ss;
+        ss << "Disconnect from card reader '" << readerName << "': " << st;
+        WFMOutputTraceData(ss.c_str());
+    }
+    void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) {
+        WFSRESULT* pResult = NULL;
+        WFMAllocateBuffer(sizeof(WFSRESULT), WFS_MEM_ZEROINIT, &pResult);
+        pResult->RequestID = ReqID;
+        pResult->hService = hService;
+        GetSystemTime(pResult->tsTimestamp);
+        pResult->hResult = result;
+
+        ::PostMessage(hWnd, messageType, NULL, (LONG)pResult);
     }
 };
 
@@ -270,7 +288,7 @@ public:
         return cards.find(hService) != cards.end();
     }
     Card& open(HSERVICE hService, const char* name) {
-        Card* card = new Card(hContext, name);
+        Card* card = new Card(hService, hContext, name);
         cards.insert(std::make_pair(hService, card));
         return *card;
     }
@@ -324,14 +342,31 @@ HRESULT  WINAPI WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
                         DWORD dwSPIVersionsRequired, LPWFSVERSION lpSPIVersion, 
                         DWORD dwSrvcVersionsRequired, LPWFSVERSION lpSrvcVersion
 ) {
-    // Получаем хендл карты, с которой будем работать.
-    pcsc.open(hService, lpszLogicalName);
-
+    // Возвращаем поддерживаемые версии.
     if (lpSPIVersion != NULL) {
+        // Версия XFS менеджера, которая будет использоваться. Т.к. мы поддерживаем все версии,
+        // то просто максимальная запрошенная версия (она в младшем слове).
+        lpSPIVersion->wVersion = LOWORD(dwSPIVersionsRequired);
+        // Минимальная и максимальная поддерживаемая нами версия
+        //TODO: Уточнить минимальную поддерживаемую версию!
+        lpSPIVersion->wLowVersion  = MAKE_VERSION(0, 0);
+        lpSPIVersion->wHighVersion = MAKE_VERSION(255, 255);
         lpSPIVersion->wVersion
     }
-    WFSRESULT* pResult;
-    WFMAllocateBuffer(sizeof(WFSRESULT), ulMemFlags, &pResult);
+    if (lpSrvcVersion != NULL) {
+        // Версия XFS менеджера, которая будет использоваться. Т.к. мы поддерживаем все версии,
+        // то просто максимальная запрошенная версия (она в младшем слове).
+        lpSrvcVersion->wVersion = LOWORD(dwSrvcVersionsRequired);
+        // Минимальная и максимальная поддерживаемая нами версия
+        //TODO: Уточнить минимальную поддерживаемую версию!
+        lpSrvcVersion->wLowVersion  = MAKE_VERSION(0, 0);
+        lpSrvcVersion->wHighVersion = MAKE_VERSION(255, 255);
+        lpSrvcVersion->wVersion
+    }
+
+    // Получаем хендл карты, с которой будем работать.
+    pcsc.open(hService, lpszLogicalName).sendResult(hWnd, ReqID, WFS_OPEN_COMPLETE, WFS_SUCCESS);
+
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED                The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_INTERNAL_ERROR          An internal inconsistency or other unexpected error occurred in the XFS subsystem.
@@ -351,7 +386,6 @@ HRESULT  WINAPI WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
     // WFS_ERR_SRVC_VER_TOO_LOW      The range of versions of the service-specific interface support requested by the application is lower than any supported by the service provider for the logical service being opened.
     // WFS_ERR_VERSION_ERROR_IN_SRVC Within the service, a version mismatch of two modules occurred.
 
-    //TODO: Послать окну hWnd сообщение с кодом WFS_OPEN_COMPLETE и wParam = WFSRESULT;
     return WFS_SUCCESS;
 }
 /** Завершает сессию (серию запросов к сервису, инициированную вызовом SPI функции WFPOpen)
