@@ -448,6 +448,29 @@ public:
         lpStatus->fwChipPower = state.translateChipPower();
         return lpStatus;
     }
+    WFSIDCCAPS* getCaps() {
+        WFSIDCCAPS* lpCaps;
+        HRESULT h = WFMAllocateBuffer(sizeof(WFSIDCCAPS), WFS_MEM_ZEROINIT, (LPVOID*)&lpCaps);
+        assert(h >= 0);
+
+        // Устройство является считывателем карт.
+        lpCaps->wClass = WFS_SERVICE_CLASS_IDC;
+        // Карта вставляется рукой и может быть вытащена в любой момент.
+        lpCaps->fwType = WFS_IDC_TYPEDIP;
+        // Устройство содержит только считыватель карт.
+        lpCaps->bCompound = FALSE;
+        // Какие треки могут быть прочитаны -- никакие, только чип.
+        lpCaps->fwReadTracks = WFS_IDC_NOTSUPP;
+        // Какие треки могут быть записаны -- никакие, только чип.
+        lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
+        // Виды поддерживаемых картой протоколов.
+        //lpCaps->fwChipProtocols = WFS_IDC_CHIPT0 | WFS_IDC_CHIPT1;
+        // Максимальное количество карт, которое устройство может захватить. Всегда 0, т.к. не захватывает.
+        lpCaps->usCards = 0;
+        // Тип модуля безопасности. Не поддерживается.
+        lpCaps->fwSecType = WFS_IDC_SECNOTSUPP;
+        return lpCaps;
+    }
 private:
     void log(std::string operation, Status st) const {
         std::stringstream ss;
