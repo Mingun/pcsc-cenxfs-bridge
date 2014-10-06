@@ -8,7 +8,14 @@
 
 #include <sstream>
 #include <iomanip>
+#include <map>
 #include <cassert>
+// Линкуемся с библиотекой реализации стандларта PC/SC в Windows
+#pragma comment(lib, "winscard.lib")
+// Линкуемся с библиотекой реализации XFS
+#pragma comment(lib, "msxfs.lib")
+// Линкуемся с библитекой для использования оконных функций (PostMessage)
+#pragma comment(lib, "user32.lib")
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
 
@@ -119,7 +126,7 @@ struct Status {
         return names[i];
     }
     /// Конвертирует код возврата функций PC/SC в код возврата функций XFS.
-    inline int translate() {
+    inline HRESULT translate() {
         switch (value) {/*
             case SCARD_S_SUCCESS:                 return WFS_SUCCESS;               // NO_ERROR
             case SCARD_F_INTERNAL_ERROR:          return WFS_ERR_INTERNAL_ERROR;    // _HRESULT_TYPEDEF_(0x80100001L)
@@ -185,7 +192,7 @@ struct Status {
             case SCARD_W_CACHE_ITEM_NOT_FOUND:    return ; // _HRESULT_TYPEDEF_(0x80100070L)
             case SCARD_W_CACHE_ITEM_STALE:        return ; // _HRESULT_TYPEDEF_(0x80100071L)
             case SCARD_W_CACHE_ITEM_TOO_BIG:      return ; // _HRESULT_TYPEDEF_(0x80100072L)
-*/
+            */
             // Успешно
             case SCARD_S_SUCCESS:           return WFS_SUCCESS;
             // Некорректный хендл карты (hCard)
@@ -206,8 +213,31 @@ struct Status {
 
 template<class OS>
 inline OS& operator<<(OS& os, Status s) {
-    return os << "status=" << s.name() << "(" << std::hex << s.value << ")"
+    return os << "status=" << s.name() << "(" << std::hex << s.value << ")";
 }
+
+class Result {
+    WFSRESULT* pResult;
+public:
+    Result(REQUESTID ReqID, HSERVICE hService, Status result) {
+        init(ReqID, hService, result.translate());
+    }
+    Result(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
+        init(ReqID, hService, result);
+    }
+    void send(HWND hWnd, DWORD messageType) {
+        ::PostMessage(hWnd, messageType, NULL, (LONG)pResult);
+    }
+private:
+    inline void init(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
+        // Выделяем память, заполняем ее нулями на всякий случай.
+        WFMAllocateBuffer(sizeof(WFSRESULT), WFS_MEM_ZEROINIT, (LPVOID*)&pResult);
+        pResult->RequestID = ReqID;
+        pResult->hService = hService;
+        pResult->hResult = result;
+        GetSystemTime(&pResult->tsTimestamp);
+    }
+};
 
 class Card {
     /// Хендл карты, с которой будет производиться работа.
@@ -215,7 +245,7 @@ class Card {
     /// Протокол, по которому работает карта.
     DWORD dwActiveProtocol;
     HSERVICE hService;
-    str::string readerName;
+    std::string readerName;
 
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class PCSC;
@@ -231,27 +261,40 @@ private:
             // Получаем хендл карты и выбранный протокол.
             &hCard, &dwActiveProtocol
         );
-        std::stringstream ss;
-        ss << "Connect to card reader '" << readerName << "', protocol=" << dwActiveProtocol << ": " << st;
-        WFMOutputTraceData(ss.c_str());
+        log("Connect to", st);
     }
 public:
     ~Card() {
         // При закрытии соединения ничего не делаем с карточкой, оставляем ее в считывателе.
         Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
-        std::stringstream ss;
-        ss << "Disconnect from card reader '" << readerName << "': " << st;
-        WFMOutputTraceData(ss.c_str());
+        log("Disconnect from", st);
+    }
+
+    Result lock(REQUESTID ReqID) {
+        Status st = SCardBeginTransaction(hCard);
+        log("Lock", st);
+
+        return Result(ReqID, hService, st);
+    }
+    Result unlock(REQUESTID ReqID) {
+        // Заканчиваем транзакцию, ничего не делаем с картой.
+        Status st = SCardEndTransaction(hCard, SCARD_LEAVE_CARD);
+        log("Unlock", st);
+
+        return Result(ReqID, hService, st);
+    }
+
+    inline Result result(REQUESTID ReqID, HRESULT result) {
+        return Result(ReqID, hService, result);
     }
     void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) {
-        WFSRESULT* pResult = NULL;
-        WFMAllocateBuffer(sizeof(WFSRESULT), WFS_MEM_ZEROINIT, &pResult);
-        pResult->RequestID = ReqID;
-        pResult->hService = hService;
-        GetSystemTime(pResult->tsTimestamp);
-        pResult->hResult = result;
-
-        ::PostMessage(hWnd, messageType, NULL, (LONG)pResult);
+        Result(ReqID, hService, result).send(hWnd, messageType);
+    }
+private:
+    void log(std::string operation, Status st) const {
+        std::stringstream ss;
+        ss << operation << " card reader '" << readerName << "': " << st;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
 };
 
@@ -274,14 +317,20 @@ public:
     PCSC() {
         // Создаем контекст.
         Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
+        std::stringstream ss;
+        ss << "Estabilish context: " << st;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
     /// Закрывает соединение к менеджеру подсистемы PC/SC.
     ~PCSC() {
-        for (typename CardMap::const_iterator it = cards.begin(); it != cards.end(); ++it) {
-            delete *it;
+        for (CardMap::const_iterator it = cards.begin(); it != cards.end(); ++it) {
+            delete it->second;
         }
         cards.clear();
         Status st = SCardReleaseContext(hContext);
+        std::stringstream ss;
+        ss << "Release context: " << st;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
     /** Проверяет, что указаный хендл сервиса является корректным хендлом карточки. */
     bool isValid(HSERVICE hService) {
@@ -294,12 +343,13 @@ public:
     }
     Card& get(HSERVICE hService) {
         assert(isValid(hService));
-        return *cards.find(hService);
+        return *cards.find(hService)->second;
     }
     void close(HSERVICE hService) {
         assert(isValid(hService));
-        typename CardMap::iterator it = cards.find(hService);
-        delete *it;
+        CardMap::iterator it = cards.find(hService);
+
+        delete it->second;
         cards.erase(it);
     }
 };
@@ -351,7 +401,6 @@ HRESULT  WINAPI WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
         //TODO: Уточнить минимальную поддерживаемую версию!
         lpSPIVersion->wLowVersion  = MAKE_VERSION(0, 0);
         lpSPIVersion->wHighVersion = MAKE_VERSION(255, 255);
-        lpSPIVersion->wVersion
     }
     if (lpSrvcVersion != NULL) {
         // Версия XFS менеджера, которая будет использоваться. Т.к. мы поддерживаем все версии,
@@ -361,7 +410,6 @@ HRESULT  WINAPI WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
         //TODO: Уточнить минимальную поддерживаемую версию!
         lpSrvcVersion->wLowVersion  = MAKE_VERSION(0, 0);
         lpSrvcVersion->wHighVersion = MAKE_VERSION(255, 255);
-        lpSrvcVersion->wVersion
     }
 
     // Получаем хендл карты, с которой будем работать.
@@ -486,8 +534,7 @@ HRESULT  WINAPI WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
 HRESULT  WINAPI WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
-    LONG r = SCardBeginTransaction(translate(hService));
-    //TODO: Послать окну hWnd сообщение с кодом WFS_CLOSE_COMPLETE и wParam = WFSRESULT;
+    pcsc.get(hService).lock(ReqID).send(hWnd, WFS_SUCCESS);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
@@ -515,9 +562,7 @@ HRESULT  WINAPI WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
 
-    SCARDCONTEXT hContext = {0};//TODO: Достать контекст
-    // Заканчиваем транзакцию, ничего не делаем с картой.
-    LONG r = SCardEndTransaction(hContext, SCARD_LEAVE_CARD);
+    pcsc.get(hService).unlock(ReqID).send(hWnd, WFS_SUCCESS);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_INTERNAL_ERROR  An internal inconsistency or other unexpected error occurred in the XFS subsystem.
@@ -551,15 +596,16 @@ HRESULT  WINAPI WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
     switch (dwCategory) {
         case WFS_INF_IDC_STATUS: {// Дополнительных параметров нет
-            LONG r = SCardStatus(translate(hService));
+            //Card& card = pcsc.get(hService);
+            //Status st = SCardStatus(card.hCard);
 
-            LPWFSIDCSTATUS st;
+            //LPWFSIDCSTATUS st;
             // Статус устройства (WFS_IDC_*)
-            st.fwDevice
+            //st.fwDevice
             break;
         }
         case WFS_INF_IDC_CAPABILITIES: {
-            LPWFSIDCCAPS st = (LPWFSIDCCAPS)lpQueryDetails;
+            //LPWFSIDCCAPS st = (LPWFSIDCCAPS)lpQueryDetails;
             break;
         }
         case WFS_INF_IDC_FORM_LIST:
@@ -607,7 +653,7 @@ HRESULT  WINAPI WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
 HRESULT  WINAPI WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
-    LONG r = SCardTransmit(translate(hService), );
+    //Status st = SCardTransmit(translate(hService), );
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_DEV_NOT_READY   The function required device access, and the device was not ready or timed out.

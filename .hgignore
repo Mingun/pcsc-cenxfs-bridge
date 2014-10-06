@@ -1,0 +1,4 @@
+syntax: glob
+*.dll
+*.lib
+*.obj
