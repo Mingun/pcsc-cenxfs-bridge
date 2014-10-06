@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <map>
+#include <string>
 #include <cassert>
 // Линкуемся с библиотекой реализации стандларта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")
@@ -213,7 +214,10 @@ struct Status {
 
 template<class OS>
 inline OS& operator<<(OS& os, Status s) {
-    return os << "status=" << s.name() << "(" << std::hex << s.value << ")";
+    return os << "status=" << s.name() << " (0x"
+              // На каждый байт требуется 2 символа.
+              << std::hex << std::setw(2*sizeof(s.value)) << std::setfill('0')
+              << s.value << ")";
 }
 
 class Result {
@@ -318,7 +322,7 @@ public:
         // Создаем контекст.
         Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
         std::stringstream ss;
-        ss << "Estabilish context: " << st;
+        ss << "Establish context: " << st;
         WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
     /// Закрывает соединение к менеджеру подсистемы PC/SC.
