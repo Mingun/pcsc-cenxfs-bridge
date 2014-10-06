@@ -429,6 +429,8 @@ HRESULT  WINAPI WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT  WINAPI WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_INTERNAL_ERROR  An internal inconsistency or other unexpected error occurred in the XFS subsystem.
@@ -455,6 +457,8 @@ HRESULT  WINAPI WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT  WINAPI WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED The request was canceled by WFSCancelAsyncRequest.
 
@@ -480,6 +484,8 @@ HRESULT  WINAPI WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT  WINAPI WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
     LONG r = SCardBeginTransaction(translate(hService));
     //TODO: Послать окну hWnd сообщение с кодом WFS_CLOSE_COMPLETE и wParam = WFSRESULT;
 
@@ -506,6 +512,8 @@ HRESULT  WINAPI WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT  WINAPI WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
 
     SCARDCONTEXT hContext = {0};//TODO: Достать контекст
     // Заканчиваем транзакцию, ничего не делаем с картой.
@@ -538,6 +546,8 @@ HRESULT  WINAPI WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT  WINAPI WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDetails, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
     switch (dwCategory) {
         case WFS_INF_IDC_STATUS: {// Дополнительных параметров нет
@@ -595,6 +605,8 @@ HRESULT  WINAPI WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT  WINAPI WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
     LONG r = SCardTransmit(translate(hService), );
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
@@ -623,10 +635,12 @@ HRESULT  WINAPI WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
 
     Отмена запросов не поддерживается.
 @param hService
-@param RequestID Идентификатор запроса для отмены или `NULL`, если необходимо отменить все запросы
+@param ReqID Идентификатор запроса для отмены или `NULL`, если необходимо отменить все запросы
        для указанного сервися `hService`.
 */
-HRESULT  WINAPI WFPCancelAsyncRequest(HSERVICE hService, REQUESTID RequestID) {
+HRESULT  WINAPI WFPCancelAsyncRequest(HSERVICE hService, REQUESTID ReqID) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
     // Возможные коды завершения функции:
     // WFS_ERR_CONNECTION_LOST //The connection to the service is lost.
     // WFS_ERR_INTERNAL_ERROR //An internal inconsistency or other unexpected error occurred in the XFS subsystem.
@@ -635,6 +649,8 @@ HRESULT  WINAPI WFPCancelAsyncRequest(HSERVICE hService, REQUESTID RequestID) {
     return WFS_ERR_UNSUPP_COMMAND;
 }
 HRESULT  WINAPI WFPSetTraceLevel(HSERVICE hService, DWORD dwTraceLevel) {
+    if (!pcsc.isValid(hService))
+        return WFS_ERR_INVALID_HSERVICE;
     // Возможные коды завершения функции:
     // WFS_ERR_CONNECTION_LOST    The connection to the service is lost.
     // WFS_ERR_INTERNAL_ERROR     An internal inconsistency or other unexpected error occurred in the XFS subsystem.
