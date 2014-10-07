@@ -11,6 +11,22 @@
 #include "EventSupport.h"
 #include "XFSResult.h"
 
+class ProtocolTypes {
+    DWORD value;
+public:
+    inline ProtocolTypes(DWORD flags) : value(flags) {}
+    inline WORD translate() {
+        WORD result = 0;
+        if (value & (1 << 0)) {// Нулевой бит -- протокол T0
+            result |= WFS_IDC_CHIPT0;
+        }
+        if (value & (1 << 1)) {// Первый бит -- протокол T1
+            result |= WFS_IDC_CHIPT1;
+        }
+        return result;
+    }
+};
+
 class Card : public EventNotifier {
     /// Хендл карты, с которой будет производиться работа.
     SCARDHANDLE hCard;
@@ -63,23 +79,23 @@ public:
         Result(ReqID, hService, result).send(hWnd, messageType);
     }
 public:// Функции, вызываемые в WFPGetInfo
-    WFSIDCSTATUS* getStatus() {
+    std::pair<WFSIDCSTATUS*, Status> getStatus() {
         // Состояние считывателя.
         MediaStatus state;
         DWORD nameLen;
-        DWORD attrLen;
+        DWORD atrLen;
         Status st = SCardStatus(hCard,
             // Имя получать не будем, тем не менее длину получить требуется, NULL недопустим.
             NULL, &nameLen,
             // Небольшой хак допустим, у нас прозрачная обертка, ничего лишнего.
             (DWORD*)&state, &dwActiveProtocol,
-            // Атрибуты получать не будем, тем не менее длину получить требуется, NULL недопустим.
-            NULL, &attrLen
+            // ATR получать не будем, тем не менее длину получить требуется, NULL недопустим.
+            NULL, &atrLen
         );
         log("SCardStatus: ", st);
 
         if (!st) {
-            return NULL;
+            return std::make_pair(NULL, st);
         }
 
         WFSIDCSTATUS* lpStatus = xfsAlloc<WFSIDCSTATUS>();
@@ -97,12 +113,16 @@ public:// Функции, вызываемые в WFPGetInfo
         lpStatus->usCards = 0;
         lpStatus->fwChipPower = state.translateChipPower();
         //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
-        return lpStatus;
+        return return std::make_pair(lpStatus, st);
     }
-    WFSIDCCAPS* getCaps() {
-        WFSIDCCAPS* lpCaps;
-        HRESULT h = WFMAllocateBuffer(sizeof(WFSIDCCAPS), WFS_MEM_ZEROINIT, (LPVOID*)&lpCaps);
-        assert(h >= 0);
+    std::pair<WFSIDCCAPS*, Status> getCaps() {
+        WFSIDCCAPS* lpCaps = xfsAlloc<WFSIDCCAPS>();
+
+        // Получаем поддерживаемые картой протоколы.
+        DWORD types;
+        DWORD len = sizeof(DWORD);
+        Status st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (char *)&types, &len);
+        log("SCardGetAttrib(SCARD_ATTR_PROTOCOL_TYPES)", st);
 
         // Устройство является считывателем карт.
         lpCaps->wClass = WFS_SERVICE_CLASS_IDC;
@@ -114,8 +134,8 @@ public:// Функции, вызываемые в WFPGetInfo
         lpCaps->fwReadTracks = WFS_IDC_NOTSUPP;
         // Какие треки могут быть записаны -- никакие, только чип.
         lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
-        //TODO: Виды поддерживаемых картой протоколов.
-        //lpCaps->fwChipProtocols = WFS_IDC_CHIPT0 | WFS_IDC_CHIPT1;
+        // Виды поддерживаемых картой протоколов.
+        lpCaps->fwChipProtocols = ProtocolTypes(types).translate();
         // Максимальное количество карт, которое устройство может захватить. Всегда 0, т.к. не захватывает.
         lpCaps->usCards = 0;
         // Тип модуля безопасности. Не поддерживается.
@@ -133,21 +153,22 @@ public:// Функции, вызываемые в WFPGetInfo
         // дорожки. Так как чтение/запись треков не поддерживается, то не поддерживаем.
         lpCaps->fwWriteMode = WFS_IDC_NOTSUPP;
         // Возможности считавателя по управлению питанием чипа.
+        //TODO: Возможно, возможности по управлению питанием таки есть.
         lpCaps->fwChipPower = WFS_IDC_NOTSUPP;
         //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
-        return lpCaps;
+        return std::make_pair(lpCaps, st);
     }
 public:// Функции, вызываемые в WFPExecute
-    WFSIDCCARDDATA* readChip() {
+    std::pair<WFSIDCCARDDATA*, Status> read() {
         WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
         // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
         data->wDataSource = WFS_IDC_CHIP;
         data->wStatus = WFS_IDC_DATAOK;
-        // data->ulDataLength = ;
-        // data->lpbData = ;
-        return data;
+        // Получаем ATR (Answer To Reset).
+        Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, (char *)&data->ulDataLength, &data->lpbData);
+        return std::make_pair(data, st);
     }
-    WFSIDCCHIPIO* transmit(WFSIDCCHIPIO* input) {
+    std::pair<WFSIDCCHIPIO*, Status> transmit(WFSIDCCHIPIO* input) {
         assert(input != NULL);
 
         WFSIDCCHIPIO* result = xfsAlloc<WFSIDCCHIPIO>();
@@ -161,7 +182,7 @@ public:// Функции, вызываемые в WFPExecute
         );
         log("SCardTransmit", st);
 
-        return result;
+        return std::make_pair(result, st);
     }
 private:
     void log(std::string operation, Status st) const {

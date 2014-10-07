@@ -391,13 +391,13 @@ HRESULT DLL_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
     switch (dwCategory) {
         case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет
-            WFSIDCSTATUS* status = pcsc.get(hService).getStatus();
-            Result(ReqID, hService, WFS_SUCCESS).data(status).send(hWnd, WFS_GETINFO_COMPLETE);
+            std::pair<WFSIDCSTATUS*, Status> status = pcsc.get(hService).getStatus();
+            Result(ReqID, hService, status.second).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_CAPABILITIES: {// Дополнительных параметров нет
-            WFSIDCCAPS* caps = pcsc.get(hService).getCaps();
-            Result(ReqID, hService, WFS_SUCCESS).data(caps).send(hWnd, WFS_GETINFO_COMPLETE);
+            std::pair<WFSIDCCAPS*, Status> caps = pcsc.get(hService).getCaps();
+            Result(ReqID, hService, status.second).data(caps.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_FORM_LIST:
