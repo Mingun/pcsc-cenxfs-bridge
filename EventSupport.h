@@ -52,9 +52,9 @@ public:
         mask &= ~event;
         return mask == 0;
     }
-    void notify(DWORD event) const {
+    void notify(DWORD event, WFSRESULT* result) const {
         if (mask & event) {
-            PostMessage(hWnd, (DWORD)event, 0, 0);
+            PostMessage(hWnd, (DWORD)event, 0, result);
         }
     }
 };

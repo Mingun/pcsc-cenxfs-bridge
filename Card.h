@@ -62,7 +62,7 @@ public:
     void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) {
         Result(ReqID, hService, result).send(hWnd, messageType);
     }
-
+public:// Функции, вызываемые в WFPGetInfo
     WFSIDCSTATUS* getStatus() {
         // Состояние считывателя.
         MediaStatus state;

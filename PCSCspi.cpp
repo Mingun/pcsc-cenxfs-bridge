@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 #include "PCSCStatus.h"
 #include "PCSCMediaStatus.h"
@@ -26,6 +27,14 @@
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
 
+
+template<typename T>
+static T* xfsAlloc() {
+    T* result = 0;
+    HRESULT h = WFMAllocateBuffer(sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
+    assert(h >= 0 && "Cannot allocate memory");
+    return result;
+}
 
 /** Класс, в конструкторе инициализирующий подсистему PC/SC, а в деструкторе закрывающий ее.
     Необходимо Создать ровно один экземпляр данного класса при загрузке DLL и уничтожить его
@@ -46,9 +55,7 @@ public:
     PCSC() {
         // Создаем контекст.
         Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
-        std::stringstream ss;
-        ss << "Establish context: " << st;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());
+        log("SCardEstablishContext", st);
     }
     /// Закрывает соединение к менеджеру подсистемы PC/SC.
     ~PCSC() {
@@ -57,9 +64,7 @@ public:
         }
         cards.clear();
         Status st = SCardReleaseContext(hContext);
-        std::stringstream ss;
-        ss << "Release context: " << st;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());
+        log("SCardReleaseContext", st);
     }
     /** Проверяет, что указаный хендл сервиса является корректным хендлом карточки. */
     bool isValid(HSERVICE hService) {
@@ -84,6 +89,57 @@ public:
         // Закрытие PC/SC соединения происхоидт в деструкторе Card.
         delete it->second;
         cards.erase(it);
+    }
+private:
+    void prepareReadersState() {
+        DWORD readersCount;
+        // Определяем доступные считыватели: сначало количество, затем сами считыватели.
+        Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
+        log("SCardListReaders(get readers count)", st);
+
+        std::vector<char> readerNames(readersCount);
+        st = SCardListReaders(hContext, NULL, &readerNames[0], &readersCount);
+        log("SCardListReaders(get readers)", st);
+
+        std::vector<SCARD_READERSTATE> readers(1+readersCount);
+        // Считыватель со специальным именем, означающем, что необходимо мониторить
+        // появление/пропажу считывателей.
+        readers[0].szReader = "\\\\?PnP?\\Notification";
+        readers[0].dwCurrentState = SCARD_STATE_UNAWARE;
+
+        for (std::vector<char>::const_iterator it = readerNames.begin(); it != readerNames.end(); ++it) {
+            //it
+        }
+    }
+    /** Данная блокирует выполнение до тех пор, пока не получит событие об изменении состояния
+        физических устройств, поэтому она должна вызываться в отдельном потоке. После наступления
+        события она отсылает соответствующие события всем заинтересованным слушателям подсистемы XFS.
+    */
+    void waitChanges(std::vector<SCARD_READERSTATE>& readers) {
+        // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
+        // Ждем его до бесконечности.
+        Status st = SCardGetStatusChange(hContext, INFINITE, &readers[0], readers.size());
+        log("SCardGetStatusChange", st);
+
+        if (!st) {
+            return;
+        }
+        for (std::vector<SCARD_READERSTATE>::const_iterator it = readers.begin(); it != readers.end(); ++it) {
+            WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
+            // Имя физичеcкого устройства, чье состояние изменилось
+            status->lpszPhysicalName = it->szReader;//TODO: Копировать?
+            // Рабочая станция, на которой запущен сервис.
+            status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
+            status->dwState = ReaderState(it->dwEventState).translate();
+
+            //Result(0, hService, 0).data(status).send();
+        }
+    }
+private:
+    void log(std::string operation, Status st) const {
+        std::stringstream ss;
+        ss << operation << ": " << st;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
 };
 

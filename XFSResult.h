@@ -37,6 +37,13 @@ public:
         pResult->lpBuffer = data;
         return *this;
     }
+    /// Прикрепляет к результату указанные данные возможностей устройства.
+    inline Result& data(WFSDEVSTATUS* data) {
+        assert(pResult != NULL);
+        pResult->u.dwEventID = WFS_SYSE_DEVICE_STATUS;
+        pResult->lpBuffer = data;
+        return *this;
+    }
     void send(HWND hWnd, DWORD messageType) {
         PostMessage(hWnd, messageType, NULL, (LONG)pResult);
     }
