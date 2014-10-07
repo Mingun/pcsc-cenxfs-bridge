@@ -487,11 +487,11 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
                 return WFS_ERR_INVALID_POINTER;
             }
             // Битовая маска с данными, которые должны быть прочитаны.
-            DWORD lpwReadData = *((DWORD*)lpCmdData);
+            WORD lpwReadData = *((WORD*)lpCmdData);
             if (lpwReadData & WFS_IDC_CHIP) {
                 WFSIDCCARDDATA* result = pcsc.get(hService).read();
             }
-
+            //TODO: Реализовать команду
             return WFS_ERR_INTERNAL_ERROR;
         }
         // Ждет указанное время, пока не вставят карточку, а потом записывает данные на указанный трек.
@@ -500,20 +500,45 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             //WFSIDCCARDDATA* data = (WFSIDCCARDDATA*)lpCmdData;
             return WFS_ERR_UNSUPP_COMMAND;
         }
-        // 
+        // Посылает данные чипу и полуучает от него ответ. Данные прозрачны для провайдера.
         case WFS_CMD_IDC_CHIP_IO: {
             if (lpCmdData == NULL) {
                 return WFS_ERR_INVALID_POINTER;
             }
             WFSIDCCHIPIO* data = (WFSIDCCHIPIO*)lpCmdData;
-            WFSIDCCHIPIO result = pcsc.get(hService).transmit(data);
+            WFSIDCCHIPIO* result = pcsc.get(hService).transmit(data);
+            //TODO: Реализовать команду
+            return WFS_ERR_INTERNAL_ERROR;
+        }
+        // Отключает питание чипа.
+        case WFS_CMD_IDC_RESET: {
+            if (lpCmdData == NULL) {
+                return WFS_ERR_INVALID_POINTER;
+            }
+            // Битовая маска 
+            WORD wResetIn = *((WORD*)lpCmdData);
+            //TODO: Реализовать команду
+            return WFS_ERR_INTERNAL_ERROR;
+        }
+        case WFS_CMD_IDC_CHIP_POWER: {
+            if (lpCmdData == NULL) {
+                return WFS_ERR_INVALID_POINTER;
+            }
+            WORD wChipPower = *((WORD*)lpCmdData);
+            //TODO: Реализовать команду
+            return WFS_ERR_INTERNAL_ERROR;
+        }
+        // Разбирает результат, ранее возвращенный командой WFS_CMD_IDC_READ_RAW_DATA. Так как мы ее
+        // не поддерживаем, то и эту команду мы не поддерживаем.
+        case WFS_CMD_IDC_PARSE_DATA: {
+            // WFSIDCPARSEDATA* parseData = (WFSIDCPARSEDATA*)lpCmdData;
+            return WFS_ERR_UNSUPP_COMMAND;
         }
         default: {
             // Все остальные команды недопустимы.
             return WFS_ERR_INVALID_COMMAND;
         }
-    }
-    //Status st = SCardTransmit(translate(hService), );
+    }// switch (dwCommand)
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_DEV_NOT_READY   The function required device access, and the device was not ready or timed out.
