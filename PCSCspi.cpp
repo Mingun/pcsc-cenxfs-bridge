@@ -48,6 +48,20 @@ public:
     Result(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
         init(ReqID, hService, result);
     }
+    /// Прикрепляет к результату указанные данные статуса.
+    inline Result& data(WFSIDCSTATUS* data) {
+        assert(pResult != NULL);
+        pResult->u.dwCategoryCode = WFS_INF_IDC_STATUS;
+        pResult->lpBuffer = data;
+        return *this;
+    }
+    /// Прикрепляет к результату указанные данные возможностей устройства.
+    inline Result& data(WFSIDCCAPS* data) {
+        assert(pResult != NULL);
+        pResult->u.dwCategoryCode = WFS_INF_IDC_CAPABILITIES;
+        pResult->lpBuffer = data;
+        return *this;
+    }
     void send(HWND hWnd, DWORD messageType) {
         PostMessage(hWnd, messageType, NULL, (LONG)pResult);
     }
@@ -214,7 +228,7 @@ public:
         Result(ReqID, hService, result).send(hWnd, messageType);
     }
 
-    LPWFSIDCSTATUS getStatus() {
+    WFSIDCSTATUS* getStatus() {
         // Состояние считывателя.
         MediaStatus state;
         DWORD nameLen;
@@ -249,6 +263,7 @@ public:
         //TODO Хотя, может быть, можно будет его отслеживать как количество вытащенных карт.
         lpStatus->usCards = 0;
         lpStatus->fwChipPower = state.translateChipPower();
+        //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
         return lpStatus;
     }
     WFSIDCCAPS* getCaps() {
@@ -266,12 +281,27 @@ public:
         lpCaps->fwReadTracks = WFS_IDC_NOTSUPP;
         // Какие треки могут быть записаны -- никакие, только чип.
         lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
-        // Виды поддерживаемых картой протоколов.
+        //TODO: Виды поддерживаемых картой протоколов.
         //lpCaps->fwChipProtocols = WFS_IDC_CHIPT0 | WFS_IDC_CHIPT1;
         // Максимальное количество карт, которое устройство может захватить. Всегда 0, т.к. не захватывает.
         lpCaps->usCards = 0;
         // Тип модуля безопасности. Не поддерживается.
         lpCaps->fwSecType = WFS_IDC_SECNOTSUPP;
+        // Данные два поля нужны только для моторизированных считывателей, мы не поддерживаем.
+        lpCaps->fwPowerOnOption = WFS_IDC_NOACTION;
+        lpCaps->fwPowerOffOption = WFS_IDC_NOACTION;
+        // Возможность программирования Flux Sensor. На всякий случай скажем, что не умеем.
+        //TODO: Что такое Flux Sensor?
+        lpCaps->bFluxSensorProgrammable = FALSE;
+        // Можно ли начать чтение/запись на карту, когда она уже была вытащена (при этом она затягивается
+        // обратно). Так как у нас не моторизированный считыватель, то мы этого не умеем.
+        lpCaps->bReadWriteAccessFollowingEject = FALSE;
+        // Величина магнитной силы, которую необходипо приложить для размагничивания намагниченной
+        // дорожки. Так как чтение/запись треков не поддерживается, то не поддерживаем.
+        lpCaps->fwWriteMode = WFS_IDC_NOTSUPP;
+        // Возможности считавателя по управлению питанием чипа.
+        lpCaps->fwChipPower = WFS_IDC_NOTSUPP;
+        //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
         return lpCaps;
     }
 private:
@@ -588,18 +618,20 @@ HRESULT  WINAPI WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
         return WFS_ERR_INVALID_HSERVICE;
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
     switch (dwCategory) {
-        case WFS_INF_IDC_STATUS: {// Дополнительных параметров нет
-            pcsc.get(hService).getStatus();
+        case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет
+            WFSIDCSTATUS* status = pcsc.get(hService).getStatus();
+            Result(ReqID, hService, WFS_SUCCESS).data(status).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
-        case WFS_INF_IDC_CAPABILITIES: {
-
-            //LPWFSIDCCAPS st = (LPWFSIDCCAPS)lpQueryDetails;
+        case WFS_INF_IDC_CAPABILITIES: {// Дополнительных параметров нет
+            WFSIDCCAPS* caps = pcsc.get(hService).getCaps();
+            Result(ReqID, hService, WFS_SUCCESS).data(caps).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_FORM_LIST:
         case WFS_INF_IDC_QUERY_FORM: {
-            // Формы не поддерживаем. Что это за формы такие -- непонятно.
+            // Формы не поддерживаем. Форма определяет, в каких местах на треках находятся данные.
+            // Так как треки мы не читаем и не пишем, то формы не поддерживаем.
             return WFS_ERR_UNSUPP_COMMAND;
         }
         default:
