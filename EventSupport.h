@@ -2,6 +2,7 @@
 #include <set>
 // Для std::pair
 #include <utility>
+#include <cassert>
 // Для HWND и DWORD
 #include <windef.h>
 // Для PostMessage
@@ -16,10 +17,15 @@ class EventSubscriber {
     ///   SYSTEM_EVENTS
     ///   EXECUTE_EVENTS
     DWORD mask;
+
+    friend class EventNotifier;
 public:
     /*enum Event {
+        /// Изменение статуса устройства (например, доступность).
         Service = SERVICE_EVENTS,
+        /// Устройство требует внимания со стороны пользователя, например, замены бумаги в принтере.
         User    = USER_EVENTS,
+        /// События от "железа", например, ошибки "железа", недостаочно места на диске, несоответствие версий.
         System  = SYSTEM_EVENTS,
         Execute = EXECUTE_EVENTS,
     };
@@ -56,6 +62,7 @@ private:
     SubscriberList subscribers;
 public:
     void add(HWND hWnd, DWORD event) {
+        assert(hWnd != NULL && "Attempt to subscribe NULL window to events");
         InsertResult r = subscribers.insert(EventSubscriber(hWnd, event));
         // Если указанный элемент уже существовал в карте, то он не будет заменен,
         // нам это и не нужно. Вместо этого нужно обновить существующий элемент.
@@ -64,14 +71,36 @@ public:
         }
     }
     void remove(HWND hWnd, DWORD event) {
-        SubscriberList::iterator it = subscribers.find(EventSubscriber(hWnd, event));
-        if (it != subscribers.end()) {
-            // Удаляем класс событий. Если это был последний интересуемый класс событий,
-            // то удаляем и подписчика.
-            if (it->remove(event)) {
-                subscribers.erase(it);
+        // NULL означает, что производится отписка для всех окон
+        if (hWnd == NULL) {
+            std::vector<HWND> forRemove;
+            for (typename SubscriberList::iterator it = subscribers.begin(); subscribers.end(); ++it) {
+                // Удаляем класс событий. Если это был последний интересуемый класс событий,
+                // то удаляем и подписчика. Если указан 0, то отписка идет от всех классов событий.
+                if (event == 0 || it->remove(event)) {
+                    // Для C++11 можно было бы использовать it = subscribers.erase(it);
+                    // Но хочется остаться в рамках C++03
+                    forRemove.push_back(it->hWnd);
+                }
+            }
+            for (typename std::vector<HWND>::const_iterator it = forRemove.begin(); forRemove.end(); ++it) {
+                // Второй параметр конструктора не важен.
+                subscribers.erase(EventSubscriber(*it, 0));
+            }
+        } else {
+            SubscriberList::iterator it = subscribers.find(EventSubscriber(hWnd, event));
+            if (it != subscribers.end()) {
+                // Удаляем класс событий. Если это был последний интересуемый класс событий,
+                // то удаляем и подписчика. Если указан 0, то отписка идет от всех классов событий.
+                if (event == 0 || it->remove(event)) {
+                    subscribers.erase(it);
+                }
             }
         }
+    }
+    /// Удаляет всех подписчиков на события.
+    void clear() {
+        subscribers.clear();
     }
     /// Уведомляет всех подписчиков об указанном событии.
     void notify(DWORD event) const {

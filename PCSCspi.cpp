@@ -49,7 +49,7 @@ public:
         init(ReqID, hService, result);
     }
     void send(HWND hWnd, DWORD messageType) {
-        ::PostMessage(hWnd, messageType, NULL, (LONG)pResult);
+        PostMessage(hWnd, messageType, NULL, (LONG)pResult);
     }
 private:
     inline void init(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
@@ -327,12 +327,16 @@ public:
     }
     Card& get(HSERVICE hService) {
         assert(isValid(hService));
-        return *cards.find(hService)->second;
+        Card* card = cards.find(hService)->second;
+        assert(card != NULL);
+        return *card;
     }
     void close(HSERVICE hService) {
         assert(isValid(hService));
         CardMap::iterator it = cards.find(hService);
 
+        assert(it->second != NULL);
+        // Закрытие PC/SC соединения происхоидт в деструкторе Card.
         delete it->second;
         cards.erase(it);
     }
@@ -454,7 +458,7 @@ HRESULT  WINAPI WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 @message WFS_REGISTER_COMPLETE
 
 @param hService Сервис, чьи сообщения требуется мониторить.
-@param dwEventClass Логический OR классов сообщений, которые не нужно мониторить. 0 означает, что
+@param dwEventClass Логический OR классов сообщений, которые нужно мониторить. 0 означает, что
        производится подписка на все классы событий.
 @param hWndReg Окно, которое будет получать события указанных классов.
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
@@ -463,6 +467,9 @@ HRESULT  WINAPI WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 HRESULT  WINAPI WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
+    // Регистрируем событие для окна.
+    pcsc.get(hService).add(hWndReg, dwEventClass);
+    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_INTERNAL_ERROR  An internal inconsistency or other unexpected error occurred in the XFS subsystem.
@@ -491,6 +498,8 @@ HRESULT  WINAPI WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg
 HRESULT  WINAPI WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
+    pcsc.get(hService).remove(hWndReg, dwEventClass);
+    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_DEREGISTER_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED The request was canceled by WFSCancelAsyncRequest.
 
