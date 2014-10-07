@@ -446,6 +446,73 @@ HRESULT  WINAPI WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
 HRESULT  WINAPI WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
+
+    switch (dwCommand) {
+        // Ожидание вставки карты с указанным таймаутом, немедленное чтение треков согласно форме,
+        // переданой в парметре. Так как мы не умеем читать треки, то команда не поддерживается.
+        case WFS_CMD_IDC_READ_TRACK: {
+            //LPSTR formName = (LPSTR)lpCmdData;
+            return WFS_ERR_UNSUPP_COMMAND;
+        }
+        // Аналогично чтению треков.
+        case WFS_CMD_IDC_WRITE_TRACK: {
+            //WFSIDCWRITETRACK* input = (WFSIDCWRITETRACK*)lpCmdData;
+            return WFS_ERR_UNSUPP_COMMAND;
+        }
+        // Команда говорит считывателю вернуть карту. Так как наш считыватель не умеет сам что-либо
+        // делать с картой, эту команду мы не поддерживаем.
+        case WFS_CMD_IDC_EJECT_CARD: {// Входных параметров нет.
+            return WFS_ERR_UNSUPP_COMMAND;
+        }
+        // Команда на захват карты считывателем. Аналогично предудущей команде.
+        case WFS_CMD_IDC_RETAIN_CARD {// Входных параметров нет.
+            return WFS_ERR_UNSUPP_COMMAND;
+        }
+        // Команда на сброс счетчика захваченных карт. Так как мы их не звахватываем, то не поддерживаем.
+        case WFS_CMD_IDC_RESET_COUNT: {// Входных параметров нет.
+            return WFS_ERR_UNSUPP_COMMAND;
+        }
+        // Устанавливает DES-ключ, необходимый для работы модуля CIM86. Не поддерживаем,
+        // т.к. у нас нет такого модуля.
+        case WFS_CMD_IDC_SETKEY: {
+            //WFSIDCSETKEY* = (WFSIDCSETKEY*)lpCmdData;
+            return WFS_ERR_UNSUPP_COMMAND;
+        }
+        // Подключаем чип, сбрасываем его и читаем ATR (Answer To Reset).
+        // Также данная команда может быть использована для "холодного" сброса чипа.
+        // Эта команда не должна использоваться для постоянно присоединенного чипа.
+        //TODO: Чип постоянно подсоединен или нет?
+        case WFS_CMD_IDC_READ_RAW_DATA: {
+            if (lpCmdData == NULL) {
+                return WFS_ERR_INVALID_POINTER;
+            }
+            // Битовая маска с данными, которые должны быть прочитаны.
+            DWORD lpwReadData = *((DWORD*)lpCmdData);
+            if (lpwReadData & WFS_IDC_CHIP) {
+                WFSIDCCARDDATA* result = pcsc.get(hService).read();
+            }
+
+            return WFS_ERR_INTERNAL_ERROR;
+        }
+        // Ждет указанное время, пока не вставят карточку, а потом записывает данные на указанный трек.
+        // Не поддерживаем, т.к. не умеем писать треки.
+        case WFS_CMD_IDC_WRITE_RAW_DATA: {
+            //WFSIDCCARDDATA* data = (WFSIDCCARDDATA*)lpCmdData;
+            return WFS_ERR_UNSUPP_COMMAND;
+        }
+        // 
+        case WFS_CMD_IDC_CHIP_IO: {
+            if (lpCmdData == NULL) {
+                return WFS_ERR_INVALID_POINTER;
+            }
+            WFSIDCCHIPIO* data = (WFSIDCCHIPIO*)lpCmdData;
+            WFSIDCCHIPIO result = pcsc.get(hService).transmit(data);
+        }
+        default: {
+            // Все остальные команды недопустимы.
+            return WFS_ERR_INVALID_COMMAND;
+        }
+    }
     //Status st = SCardTransmit(translate(hService), );
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
@@ -467,7 +534,7 @@ HRESULT  WINAPI WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
     // WFS_ERR_INVALID_HWND       The hWnd parameter is not a valid window handle.
     // WFS_ERR_INVALID_POINTER    A pointer parameter does not point to accessible memory.
     // WFS_ERR_UNSUPP_COMMAND     The dwCommand issued, although valid for this service class, is not supported by this service provider.
-    return WFS_SUCCESS;
+    return WFS_ERR_INTERNAL_ERROR;
 }
 /** Отменяет указанный (либо все) асинхронный запрос, выполняемый провайдером, прежде, чем он завершится.
     Все запросы, котрые не успели выпонится к этому времени, завершатся с кодом `WFS_ERR_CANCELED`.

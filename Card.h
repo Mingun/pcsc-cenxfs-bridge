@@ -82,9 +82,7 @@ public:// Функции, вызываемые в WFPGetInfo
             return NULL;
         }
 
-        WFSIDCSTATUS* lpStatus;
-        HRESULT h = WFMAllocateBuffer(sizeof(WFSIDCSTATUS), WFS_MEM_ZEROINIT, (LPVOID*)&lpStatus);
-        assert(h >= 0);
+        WFSIDCSTATUS* lpStatus = xfsAlloc<WFSIDCSTATUS>();
         // Набор флагов, определяющих состояние устройства. Наше устройство всегда на связи,
         // т.к. в противном случае при открытии сесии с PC/SC драйвером будет ошибка.
         lpStatus->fwDevice = WFS_IDC_DEVONLINE;
@@ -138,6 +136,32 @@ public:// Функции, вызываемые в WFPGetInfo
         lpCaps->fwChipPower = WFS_IDC_NOTSUPP;
         //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
         return lpCaps;
+    }
+public:// Функции, вызываемые в WFPExecute
+    WFSIDCCARDDATA* readChip() {
+        WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
+        // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
+        data->wDataSource = WFS_IDC_CHIP;
+        data->wStatus = WFS_IDC_DATAOK;
+        // data->ulDataLength = ;
+        // data->lpbData = ;
+        return data;
+    }
+    WFSIDCCHIPIO* transmit(WFSIDCCHIPIO* input) {
+        assert(input != NULL);
+
+        WFSIDCCHIPIO* result = xfsAlloc<WFSIDCCHIPIO>();
+        result->wChipProtocol = input->wChipProtocol;
+
+        SCARD_IO_REQUEST ioRq;//TODO: Получить протокол.
+        SCARD_IO_REQUEST ioRs;//TODO: Получить протокол.
+        Status st = SCardTransmit(hCard,
+            &ioRq, input->lpbChipData, input->ulChipDataLength
+            NULL, result->lpbChipData, result->ulChipDataLength
+        );
+        log("SCardTransmit", st);
+
+        return result;
     }
 private:
     void log(std::string operation, Status st) const {
