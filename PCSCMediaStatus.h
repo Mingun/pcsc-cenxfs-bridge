@@ -20,6 +20,9 @@
 */
 class MediaStatus {
     DWORD value;
+    
+    template<class OS>
+    friend OS& operator<<(OS& os, MediaStatus s);
 public:
     MediaStatus() : value(0) {}
     MediaStatus(DWORD value) : value(value) {}
@@ -116,17 +119,19 @@ public:
 };
 template<class OS>
 inline OS& operator<<(OS& os, MediaStatus s) {
+    os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(s.value)) << '(';
     std::vector<CTString> names = s.flagNames();
-    os << '[';
     bool first = true;
     for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {
+        if (!it->isValid())
+            continue;
         if (!first) {
             os << ", ";
         }
         os << *it;
         first = false;
     }
-    return os << ']';
+    return os << ')';
 }
 
 #endif // PCSC_CENXFS_BRIDGE_MediaStatus_H
