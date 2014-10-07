@@ -12,7 +12,7 @@ struct Status {
     LONG value;
     Status(LONG rv) : value(rv) {}
 
-    operator bool() const { return value != 0; }
+    operator bool() const { return value == 0; }
 
     inline const char* name() {
         static const char* names[] = {

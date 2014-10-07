@@ -26,14 +26,14 @@ public:
     /// Прикрепляет к результату указанные данные статуса.
     inline Result& data(WFSIDCSTATUS* data) {
         assert(pResult != NULL);
-        pResult->u.dwCategoryCode = WFS_INF_IDC_STATUS;
+        pResult->u.dwCommandCode = WFS_INF_IDC_STATUS;
         pResult->lpBuffer = data;
         return *this;
     }
     /// Прикрепляет к результату указанные данные возможностей устройства.
     inline Result& data(WFSIDCCAPS* data) {
         assert(pResult != NULL);
-        pResult->u.dwCategoryCode = WFS_INF_IDC_CAPABILITIES;
+        pResult->u.dwCommandCode = WFS_INF_IDC_CAPABILITIES;
         pResult->lpBuffer = data;
         return *this;
     }

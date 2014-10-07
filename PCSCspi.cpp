@@ -15,6 +15,7 @@
 
 #include "PCSCStatus.h"
 #include "PCSCMediaStatus.h"
+#include "PCSCReaderState.h"
 #include "XFSResult.h"
 #include "Card.h"
 
@@ -127,7 +128,7 @@ private:
         for (std::vector<SCARD_READERSTATE>::const_iterator it = readers.begin(); it != readers.end(); ++it) {
             WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
             // Имя физичеcкого устройства, чье состояние изменилось
-            status->lpszPhysicalName = it->szReader;//TODO: Копировать?
+            strcpy(status->lpszPhysicalName, it->szReader);
             // Рабочая станция, на которой запущен сервис.
             status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
             status->dwState = ReaderState(it->dwEventState).translate();

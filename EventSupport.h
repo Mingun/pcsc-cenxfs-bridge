@@ -34,7 +34,7 @@ public:
     };
     typedef Flags<Event> EventFlags;*/
 public:
-    EventSubscriber(HWND hWnd, DWORD mask) hWnd(hWnd), mask(mask) {}
+    EventSubscriber(HWND hWnd, DWORD mask) : hWnd(hWnd), mask(mask) {}
     bool operator==(const EventSubscriber& other) const {
         return hWnd == other.hWnd;
     }
@@ -77,7 +77,7 @@ public:
         // NULL означает, что производится отписка для всех окон
         if (hWnd == NULL) {
             std::vector<HWND> forRemove;
-            for (typename SubscriberList::iterator it = subscribers.begin(); subscribers.end(); ++it) {
+            for (SubscriberList::iterator it = subscribers.begin(); it != subscribers.end(); ++it) {
                 // Удаляем класс событий. Если это был последний интересуемый класс событий,
                 // то удаляем и подписчика. Если указан 0, то отписка идет от всех классов событий.
                 if (event == 0 || it->remove(event)) {
@@ -86,7 +86,7 @@ public:
                     forRemove.push_back(it->hWnd);
                 }
             }
-            for (typename std::vector<HWND>::const_iterator it = forRemove.begin(); forRemove.end(); ++it) {
+            for (std::vector<HWND>::const_iterator it = forRemove.begin(); it != forRemove.end(); ++it) {
                 // Второй параметр конструктора не важен.
                 subscribers.erase(EventSubscriber(*it, 0));
             }
@@ -106,9 +106,10 @@ public:
         subscribers.clear();
     }
     /// Уведомляет всех подписчиков об указанном событии.
-    void notify(DWORD event) const {
-        for (typename SubscriberList::const_iterator it = subscribers.begin(); subscribers.end(); ++it) {
-            it->second.notify(event);
+    void notify(DWORD event, WFSRESULT* result) const {
+        for (SubscriberList::const_iterator it = subscribers.begin(); it != subscribers.end(); ++it) {
+            //TODO: Копирование result -- чтобы у каждого подписчика был свой.
+            it->notify(event, result);
         }
     }
 };
