@@ -163,6 +163,8 @@ public:// Функции, вызываемые в WFPExecute
         WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
         // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
         data->wDataSource = WFS_IDC_CHIP;
+        //TODO: Статус прочитанных данных необходимо выставлять в соответствии со статусом,
+        // который вернула SCardGetAttrib.
         data->wStatus = WFS_IDC_DATAOK;
         // Получаем ATR (Answer To Reset).
         Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, (char *)&data->ulDataLength, &data->lpbData);

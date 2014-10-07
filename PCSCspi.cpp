@@ -137,7 +137,7 @@ private:
         }
     }
 private:
-    void log(std::string operation, Status st) const {
+    static void log(std::string operation, Status st) {
         std::stringstream ss;
         ss << operation << ": " << st;
         WFMOutputTraceData((LPSTR)ss.str().c_str());
@@ -489,10 +489,11 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             // Битовая маска с данными, которые должны быть прочитаны.
             WORD lpwReadData = *((WORD*)lpCmdData);
             if (lpwReadData & WFS_IDC_CHIP) {
-                WFSIDCCARDDATA* result = pcsc.get(hService).read();
+                std::pair<WFSIDCCARDDATA*, Status> result = pcsc.get(hService).read();
+                Result(ReqID, hService, status.second).data(status.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+                return WFS_SUCCESS;
             }
-            //TODO: Реализовать команду
-            return WFS_ERR_INTERNAL_ERROR;
+            return WFS_ERR_UNSUPP_COMMAND;
         }
         // Ждет указанное время, пока не вставят карточку, а потом записывает данные на указанный трек.
         // Не поддерживаем, т.к. не умеем писать треки.
@@ -506,9 +507,9 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
                 return WFS_ERR_INVALID_POINTER;
             }
             WFSIDCCHIPIO* data = (WFSIDCCHIPIO*)lpCmdData;
-            WFSIDCCHIPIO* result = pcsc.get(hService).transmit(data);
-            //TODO: Реализовать команду
-            return WFS_ERR_INTERNAL_ERROR;
+            std::pair<WFSIDCCHIPIO*, Status> result = pcsc.get(hService).transmit(data);
+            Result(ReqID, hService, status.second).data(status.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+            return WFS_SUCCESS;
         }
         // Отключает питание чипа.
         case WFS_CMD_IDC_RESET: {
