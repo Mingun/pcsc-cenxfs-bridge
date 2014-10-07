@@ -13,6 +13,7 @@
 #include <vector>
 #include <cassert>
 
+#include "CTString.h"
 #include "EventSupport.h"
 #include "PCSCStatus.h"
 
@@ -24,20 +25,6 @@
 #pragma comment(lib, "user32.lib")
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
-
-class CTString {
-    const char* begin;
-    const char* end;
-public:
-    CTString() : begin(NULL), end(NULL) {}
-    template<std::size_t N>
-    CTString(const char (&data)[N]) : begin(data), end(data + N) {}
-
-    std::size_t size() const { return end - begin; }
-    bool empty() const { return size() == 0; }
-    bool isValid() const { return begin != NULL; }
-};
-
 
 class Result {
     WFSRESULT* pResult;
