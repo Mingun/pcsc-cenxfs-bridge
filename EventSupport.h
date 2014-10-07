@@ -1,3 +1,6 @@
+#ifndef PCSC_CENXFS_BRIDGE_EventSupport_H
+#define PCSC_CENXFS_BRIDGE_EventSupport_H
+
 
 #include <set>
 // Для std::pair
@@ -109,3 +112,5 @@ public:
         }
     }
 };
+
+#endif // PCSC_CENXFS_BRIDGE_EventSupport_H

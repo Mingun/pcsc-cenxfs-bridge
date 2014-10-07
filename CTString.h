@@ -1,5 +1,6 @@
-#ifndef CTString_H
-#define CTString_H
+#ifndef PCSC_CENXFS_BRIDGE_CTString_H
+#define PCSC_CENXFS_BRIDGE_CTString_H
+
 #pragma once
 
 /// Класс строки времени компиляции. Позволяет эффективно получать длину строки
@@ -17,4 +18,4 @@ public:
     bool isValid() const { return begin != NULL; }
 };
 
-#endif // CTString_H
+#endif // PCSC_CENXFS_BRIDGE_CTString_H

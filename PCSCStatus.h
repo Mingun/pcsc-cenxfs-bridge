@@ -1,3 +1,11 @@
+#ifndef PCSC_CENXFS_BRIDGE_Status_H
+#define PCSC_CENXFS_BRIDGE_Status_H
+
+#pragma once
+
+#include <iomanip>
+// Для HRESULT и DWORD
+#include <windef.h>
 
 /** Результат выполнения PC/SC функций. */
 struct Status {
@@ -200,3 +208,4 @@ inline OS& operator<<(OS& os, Status s) {
               << std::hex << std::setw(2*sizeof(s.value)) << std::setfill('0')
               << s.value << ")";
 }
+#endif // PCSC_CENXFS_BRIDGE_Status_H
