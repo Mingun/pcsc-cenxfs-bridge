@@ -107,13 +107,13 @@ public:
         };
         const std::size_t size = sizeof(names)/sizeof(names[0]);
         std::vector<CTString> result(size);
-        int i = 0;
-        result[i] = (value & SCARD_ABSENT    ) ? names[i++] : CTString();
-        result[i] = (value & SCARD_PRESENT   ) ? names[i++] : CTString();
-        result[i] = (value & SCARD_SWALLOWED ) ? names[i++] : CTString();
-        result[i] = (value & SCARD_POWERED   ) ? names[i++] : CTString();
-        result[i] = (value & SCARD_NEGOTIABLE) ? names[i++] : CTString();
-        result[i] = (value & SCARD_SPECIFIC  ) ? names[i++] : CTString();
+        int i = -1;
+        result[++i] = (value & SCARD_ABSENT    ) ? names[i] : CTString();
+        result[++i] = (value & SCARD_PRESENT   ) ? names[i] : CTString();
+        result[++i] = (value & SCARD_SWALLOWED ) ? names[i] : CTString();
+        result[++i] = (value & SCARD_POWERED   ) ? names[i] : CTString();
+        result[++i] = (value & SCARD_NEGOTIABLE) ? names[i] : CTString();
+        result[++i] = (value & SCARD_SPECIFIC  ) ? names[i] : CTString();
         return result;
     }
 };
