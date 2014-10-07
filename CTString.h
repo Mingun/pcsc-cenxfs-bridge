@@ -6,16 +6,25 @@
 /// Класс строки времени компиляции. Позволяет эффективно получать длину строки
 /// от строк, заданных в коде.
 class CTString {
-    const char* begin;
-    const char* end;
+    const char* mBegin;
+    const char* mEnd;
 public:
-    CTString() : begin(NULL), end(NULL) {}
+    inline CTString() : mBegin(0), mEnd(0) {}
     template<std::size_t N>
-    CTString(const char (&data)[N]) : begin(data), end(data + N) {}
+    inline CTString(const char (&data)[N]) : mBegin(data), mEnd(data + N) {}
 
-    std::size_t size() const { return end - begin; }
-    bool empty() const { return size() == 0; }
-    bool isValid() const { return begin != NULL; }
+    inline std::size_t size() const { return mEnd - mBegin; }
+    inline bool empty() const { return size() == 0; }
+    inline bool isValid() const { return mBegin != 0; }
+    inline const char* begin() const { return mBegin; }
+    inline const char* end() const { return mEnd; }
 };
+
+template<class OS>
+inline OS& operator<<(OS& os, CTString s) {
+    if (s.isValid())
+        return os << s.begin();
+    return os;
+}
 
 #endif // PCSC_CENXFS_BRIDGE_CTString_H

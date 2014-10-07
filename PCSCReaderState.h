@@ -96,5 +96,19 @@ public:
         return result;
     }
 };
+template<class OS>
+inline OS& operator<<(OS& os, ReaderState s) {
+    std::vector<CTString> names = s.flagNames();
+    os << '[';
+    bool first = true;
+    for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {
+        if (!first) {
+            os << ", ";
+        }
+        os << *it;
+        first = false;
+    }
+    return os << ']';
+}
 
 #endif // PCSC_CENXFS_BRIDGE_ReaderState_H
