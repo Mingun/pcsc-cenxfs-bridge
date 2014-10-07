@@ -16,6 +16,7 @@
 #include "EventSupport.h"
 #include "PCSCStatus.h"
 #include "PCSCMediaStatus.h"
+#include "XFSResult.h"
 
 // Линкуемся с библиотекой реализации стандларта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")
@@ -25,44 +26,6 @@
 #pragma comment(lib, "user32.lib")
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
-
-class Result {
-    WFSRESULT* pResult;
-public:
-    Result(REQUESTID ReqID, HSERVICE hService, Status result) {
-        init(ReqID, hService, result.translate());
-    }
-    Result(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
-        init(ReqID, hService, result);
-    }
-    /// Прикрепляет к результату указанные данные статуса.
-    inline Result& data(WFSIDCSTATUS* data) {
-        assert(pResult != NULL);
-        pResult->u.dwCategoryCode = WFS_INF_IDC_STATUS;
-        pResult->lpBuffer = data;
-        return *this;
-    }
-    /// Прикрепляет к результату указанные данные возможностей устройства.
-    inline Result& data(WFSIDCCAPS* data) {
-        assert(pResult != NULL);
-        pResult->u.dwCategoryCode = WFS_INF_IDC_CAPABILITIES;
-        pResult->lpBuffer = data;
-        return *this;
-    }
-    void send(HWND hWnd, DWORD messageType) {
-        PostMessage(hWnd, messageType, NULL, (LONG)pResult);
-    }
-private:
-    inline void init(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
-        // Выделяем память, заполняем ее нулями на всякий случай.
-        WFMAllocateBuffer(sizeof(WFSRESULT), WFS_MEM_ZEROINIT, (LPVOID*)&pResult);
-        pResult->RequestID = ReqID;
-        pResult->hService = hService;
-        pResult->hResult = result;
-        GetSystemTime(&pResult->tsTimestamp);
-    }
-};
-
 
 class Card : public EventNotifier {
     /// Хендл карты, с которой будет производиться работа.
