@@ -105,7 +105,7 @@ private:
     void waitChanges(std::vector<SCARD_READERSTATE>& readers) {
         // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
         // Ждем его до бесконечности.
-        Status st = SCardGetStatusChange(hContext, INFINITE, &readers[0], readers.size());
+        Status st = SCardGetStatusChange(hContext, INFINITE, &readers[0], (DWORD)readers.size());
         log("SCardGetStatusChange", st);
 
         if (!st) {

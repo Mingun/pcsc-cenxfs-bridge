@@ -101,7 +101,7 @@ public:
         return *this;
     }
     void send(HWND hWnd, DWORD messageType) {
-        PostMessage(hWnd, messageType, NULL, (LONG)pResult);
+        PostMessage(hWnd, messageType, NULL, (LPARAM)pResult);
     }
 private:
     inline void init(REQUESTID ReqID, HSERVICE hService, HRESULT result) {

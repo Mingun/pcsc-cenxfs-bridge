@@ -17,121 +17,93 @@
 
 /** Класс для представления состояния устройств. Позволяет преобразовать состояния в XFS
     состояния и распечатать набор текущих флагов.
+@par 
+    В Linux-е данное значение является битовой маской значений, в то время, как
+    в Windows это перечисление
 */
-class MediaStatus {
-    DWORD value;
-    
-    template<class OS>
-    friend OS& operator<<(OS& os, MediaStatus s);
+class MediaStatus : public Enum<DWORD, MediaStatus> {
+    typedef Enum<DWORD, MediaStatus> _Base;
 public:
-    MediaStatus() : value(0) {}
-    MediaStatus(DWORD value) : value(value) {}
+    MediaStatus() : _Base(0) {}
+    MediaStatus(DWORD value) : _Base(value) {}
     WORD translateMedia() {
-        WORD result = 0;
+        switch (value) {
         // Карта отсутствует в устройстве
-        if (value & SCARD_ABSENT) {
+        case SCARD_ABSENT: {
             // Media is not present in the device and not at the entering position.
-            result |= WFS_IDC_MEDIANOTPRESENT;
+            return WFS_IDC_MEDIANOTPRESENT;
         }
         // Карта присутствует в устройстве, однако она не в рабочей позиции
-        if (value & SCARD_PRESENT) {
+        case SCARD_PRESENT: {
             // Media is present in the device, not in the entering
             // position and not jammed. On the Latched DIP device,
             // this indicates that the card is present in the device and
             // the card is unlatched.
-            result |= WFS_IDC_MEDIAPRESENT;
+            return WFS_IDC_MEDIAPRESENT;
         }
         // Карта присутствует в устройстве, но на ней нет питания
-        if (value & SCARD_SWALLOWED) {
+        case SCARD_SWALLOWED: {
             // Media is at the entry/exit slot of a motorized device
-            result |= WFS_IDC_MEDIAENTERING;
+            return WFS_IDC_MEDIAENTERING;
         }
         // Питание на карту подано, но считыватель не знает режим работы карты
-        if (value & SCARD_POWERED) {
-            //result |= ;
-        }
+        case SCARD_POWERED:
         // Карта была сброшена (reset) и ожидает согласование PTS.
-        if (value & SCARD_NEGOTIABLE) {
-            //result |= ;
-        }
+        case SCARD_NEGOTIABLE:
         // Карта была сброшена (reset) и установлен specific протокол общения.
-        if (value & SCARD_SPECIFIC) {
-            //result |= ;
-        }
-        return result;
+        case SCARD_SPECIFIC: break;
+        }// switch (value)
+        return 0;
     }
     WORD translateChipPower() {
-        WORD result = 0;
+        switch (value) {
         // Карта отсутствует в устройстве
-        if (value & SCARD_ABSENT) {
+        case SCARD_ABSENT: {
             // There is no card in the device.
-            result |= WFS_IDC_CHIPNOCARD;
+            return WFS_IDC_CHIPNOCARD;
         }
         // Карта присутствует в устройстве, однако она не в рабочей позиции
-        if (value & SCARD_PRESENT) {
+        case SCARD_PRESENT: {
             // The chip is present, but powered off (i.e. not contacted).
-            result |= WFS_IDC_CHIPPOWEREDOFF;
+            return WFS_IDC_CHIPPOWEREDOFF;
         }
         // Карта присутствует в устройстве, но на ней нет питания
-        if (value & SCARD_SWALLOWED) {
+        case SCARD_SWALLOWED: {
             // The chip is present, but powered off (i.e. not contacted).
-            result |= WFS_IDC_CHIPPOWEREDOFF;
+            return WFS_IDC_CHIPPOWEREDOFF;
         }
         // Питание на карту подано, но считыватель не знает режим работы карты
-        if (value & SCARD_POWERED) {
-            //result |= ;
+        case SCARD_POWERED: {
+            return 0;
         }
         // Карта была сброшена (reset) и ожидает согласование PTS.
-        if (value & SCARD_NEGOTIABLE) {
+        case SCARD_NEGOTIABLE: {
             // The state of the chip cannot be determined with the device in its current state.
-            result |= WFS_IDC_CHIPUNKNOWN;
+            return WFS_IDC_CHIPUNKNOWN;
         }
         // Карта была сброшена (reset) и установлен specific протокол общения.
-        if (value & SCARD_SPECIFIC) {
+        case SCARD_SPECIFIC: {
             // The chip is present, powered on and online (i.e.
             // operational, not busy processing a request and not in an
             // error state).
-            result |= WFS_IDC_CHIPONLINE;
+            return WFS_IDC_CHIPONLINE;
         }
-        return result;
+        }// switch (value)
+        return 0;
     }
 
-    const std::vector<CTString> flagNames() {
+    const CTString name() {
         static CTString names[] = {
-            CTString("SCARD_ABSENT"    ),
-            CTString("SCARD_PRESENT"   ),
-            CTString("SCARD_SWALLOWED" ),
-            CTString("SCARD_POWERED"   ),
-            CTString("SCARD_NEGOTIABLE"),
-            CTString("SCARD_SPECIFIC"  ),
+            CTString("SCARD_UNKNOWN"   ), // 0x00000000
+            CTString("SCARD_ABSENT"    ), // 0x00000001
+            CTString("SCARD_PRESENT"   ), // 0x00000002
+            CTString("SCARD_SWALLOWED" ), // 0x00000003
+            CTString("SCARD_POWERED"   ), // 0x00000004
+            CTString("SCARD_NEGOTIABLE"), // 0x00000005
+            CTString("SCARD_SPECIFIC"  ), // 0x00000006
         };
-        const std::size_t size = sizeof(names)/sizeof(names[0]);
-        std::vector<CTString> result(size);
-        int i = -1;
-        result[++i] = (value & SCARD_ABSENT    ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_PRESENT   ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_SWALLOWED ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_POWERED   ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_NEGOTIABLE) ? names[i] : CTString();
-        result[++i] = (value & SCARD_SPECIFIC  ) ? names[i] : CTString();
-        return result;
+        return _Base::name(names);
     }
 };
-template<class OS>
-inline OS& operator<<(OS& os, MediaStatus s) {
-    os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(s.value)) << '(';
-    std::vector<CTString> names = s.flagNames();
-    bool first = true;
-    for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {
-        if (!it->isValid())
-            continue;
-        if (!first) {
-            os << ", ";
-        }
-        os << *it;
-        first = false;
-    }
-    return os << ')';
-}
 
 #endif // PCSC_CENXFS_BRIDGE_MediaStatus_H
