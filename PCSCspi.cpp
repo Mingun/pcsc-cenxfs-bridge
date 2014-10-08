@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstddef>
 
+#include "Utils.h"
 #include "PCSCStatus.h"
 #include "PCSCMediaStatus.h"
 #include "PCSCReaderState.h"
@@ -29,13 +30,6 @@
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
 #define DLL_API __declspec(dllexport)
 
-template<typename T>
-static T* xfsAlloc() {
-    T* result = 0;
-    HRESULT h = WFMAllocateBuffer(sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
-    assert(h >= 0 && "Cannot allocate memory");
-    return result;
-}
 
 /** Класс, в конструкторе инициализирующий подсистему PC/SC, а в деструкторе закрывающий ее.
     Необходимо Создать ровно один экземпляр данного класса при загрузке DLL и уничтожить его
@@ -592,7 +586,7 @@ HRESULT DLL_API WFPSetTraceLevel(HSERVICE hService, DWORD dwTraceLevel) {
     // WFS_ERR_OP_IN_PROGRESS     A blocking operation is in progress on the thread; only WFSCancelBlockingCall and WFSIsBlocking are permitted at this time.
     return WFS_SUCCESS;
 }
-/** Вызывается XFS для поределения того, можно ли выгрузить DLL с данным сервис-провайдером прямо сейчас. */
+/** Вызывается XFS для определения того, можно ли выгрузить DLL с данным сервис-провайдером прямо сейчас. */
 HRESULT DLL_API WFPUnloadService() {
     // Возможные коды завершения функции:
     // WFS_ERR_NOT_OK_TO_UNLOAD
