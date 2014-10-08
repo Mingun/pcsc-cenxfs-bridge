@@ -195,7 +195,7 @@ HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /** Получает эксклюзивный доступ к устройству.
 
-@message WFS_CLOSE_COMPLETE
+@message WFS_LOCK_COMPLETE
 
 @param hService Сервис, к которому нужно получить эксклюзивный доступ.
 @param dwTimeOut Таймаут (в мс), в течении которого необходимо получить доступ. `WFS_INDEFINITE_WAIT`,
@@ -206,7 +206,8 @@ HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
 HRESULT SPI_API WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
-    pcsc.get(hService).lock(ReqID).send(hWnd, WFS_SUCCESS);
+    Status st = pcsc.get(hService).lock();
+    Result(ReqID, hService, st).send(hWnd, WFS_LOCK_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
@@ -234,7 +235,8 @@ HRESULT SPI_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
 
-    pcsc.get(hService).unlock(ReqID).send(hWnd, WFS_SUCCESS);
+    Status st = pcsc.get(hService).unlock();
+    Result(ReqID, hService, st).send(hWnd, WFS_UNLOCK_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_INTERNAL_ERROR  An internal inconsistency or other unexpected error occurred in the XFS subsystem.

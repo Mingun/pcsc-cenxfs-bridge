@@ -4,6 +4,7 @@
 #pragma once
 // Для std::size_t
 #include <cstddef>
+#include <cassert>
 // Для WFMAllocateBuffer
 #include <xfsadmin.h>
 

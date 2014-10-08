@@ -7,9 +7,11 @@
 // Для HRESULT и DWORD
 #include <windef.h>
 
+#include "Utils.h"
+
 /** Результат выполнения PC/SC функций. */
-class Status : public Enum<LONG> {
-    typedef Enum<LONG> _Base;
+class Status : public Enum<LONG, Status> {
+    typedef Enum<LONG, Status> _Base;
 public:
     Status(LONG value) : _Base(value) {}
 
@@ -111,11 +113,7 @@ public:
         //      Facility - is the facility code
         //
         //      Code - is the facility's status code
-        LONG i = (value & 0x0000FFFF);
-        if (i < 0 || i > sizeof(names) / sizeof(names[0])) {
-            return "<unknown>";
-        }
-        return names[i];
+        return _Base::name(names, (LONG)0x0000FFFF);
     }
     /// Конвертирует код возврата функций PC/SC в код возврата функций XFS.
     inline HRESULT translate() {
@@ -202,12 +200,4 @@ public:
         return WFS_ERR_INTERNAL_ERROR;
     }
 };
-
-template<class OS>
-inline OS& operator<<(OS& os, Status s) {
-    return os << "status=" << s.name() << " (0x"
-              // На каждый байт требуется 2 символа.
-              << std::hex << std::setw(2*sizeof(s.value)) << std::setfill('0')
-              << s.value << ")";
-}
 #endif // PCSC_CENXFS_BRIDGE_Status_H

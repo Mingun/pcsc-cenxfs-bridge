@@ -17,6 +17,42 @@
 #include "Utils.h"
 #include "PCSCStatus.h"
 
+class MsgType : public Enum<DWORD, MsgType> {
+    typedef Enum<DWORD, MsgType> _Base;
+public:
+    MsgType(DWORD value) : _Base(value) {}
+
+    CTString name() const {
+        static CTString names1[] = {
+            CTString("WFS_OPEN_COMPLETE"      ), // (WM_USER + 1)
+            CTString("WFS_CLOSE_COMPLETE"     ), // (WM_USER + 2)
+            CTString("WFS_LOCK_COMPLETE"      ), // (WM_USER + 3)
+            CTString("WFS_UNLOCK_COMPLETE"    ), // (WM_USER + 4)
+            CTString("WFS_REGISTER_COMPLETE"  ), // (WM_USER + 5)
+            CTString("WFS_DEREGISTER_COMPLETE"), // (WM_USER + 6)
+            CTString("WFS_GETINFO_COMPLETE"   ), // (WM_USER + 7)
+            CTString("WFS_EXECUTE_COMPLETE"   ), // (WM_USER + 8)
+        };
+        static CTString names2[] = {
+            CTString("WFS_EXECUTE_EVENT"      ), // (WM_USER + 20)
+            CTString("WFS_SERVICE_EVENT"      ), // (WM_USER + 21)
+            CTString("WFS_USER_EVENT"         ), // (WM_USER + 22)
+            CTString("WFS_SYSTEM_EVENT"       ), // (WM_USER + 23)
+        };
+        static CTString names3[] = {
+            CTString("WFS_TIMER_EVENT"        ), // (WM_USER + 100)
+        };
+        CTString result;
+        if (_Base::name(names1, result)) {
+            return result;
+        }
+        if (_Base::name(names2, result)) {
+            return result;
+        }
+        return _Base::name(names3);
+    }
+};
+
 class Result {
     WFSRESULT* pResult;
 public:

@@ -6,6 +6,8 @@
 #include <string>
 #include <sstream>
 
+#include <cassert>
+
 // CEN/XFS API -- Для WFMOutputTraceData
 #include <xfsadmin.h>
 // PC/CS API
@@ -13,8 +15,9 @@
 
 #include "Utils.h"
 #include "EventSupport.h"
-#include "XFSResult.h"
+#include "PCSCStatus.h"
 #include "PCSCMediaStatus.h"
+#include "XFSResult.h"
 
 class ProtocolTypes {
     DWORD value;
@@ -54,27 +57,27 @@ private:
             // Получаем хендл карты и выбранный протокол.
             &hCard, &dwActiveProtocol
         );
-        log("Connect to", st);
+        log("SCardConnect", st);
     }
 public:
     ~Card() {
         // При закрытии соединения ничего не делаем с карточкой, оставляем ее в считывателе.
         Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
-        log("Disconnect from", st);
+        log("SCardDisconnect", st);
     }
 
-    Result lock(REQUESTID ReqID) {
+    Status lock() {
         Status st = SCardBeginTransaction(hCard);
-        log("Lock", st);
+        log("SCardBeginTransaction", st);
 
-        return Result(ReqID, hService, st);
+        return st;
     }
-    Result unlock(REQUESTID ReqID) {
+    Status unlock() {
         // Заканчиваем транзакцию, ничего не делаем с картой.
         Status st = SCardEndTransaction(hCard, SCARD_LEAVE_CARD);
-        log("Unlock", st);
+        log("SCardEndTransaction", st);
 
-        return Result(ReqID, hService, st);
+        return st;
     }
 
     inline Result result(REQUESTID ReqID, HRESULT result) {
