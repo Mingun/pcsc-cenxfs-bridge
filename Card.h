@@ -99,15 +99,11 @@ public:// Функции, вызываемые в WFPGetInfo
         );
         log("SCardStatus: ", st);
 
-        if (!st) {
-            return std::make_pair((WFSIDCSTATUS*)NULL, st);
-        }
-
         WFSIDCSTATUS* lpStatus = xfsAlloc<WFSIDCSTATUS>();
         // Набор флагов, определяющих состояние устройства. Наше устройство всегда на связи,
         // т.к. в противном случае при открытии сесии с PC/SC драйвером будет ошибка.
         lpStatus->fwDevice = WFS_IDC_DEVONLINE;
-        lpStatus->fwMedia = state.translateMedia();
+        lpStatus->fwMedia = st ? state.translateMedia() : WFS_IDC_MEDIANOTPRESENT;
         // У считывателей нет корзины для захваченных карт.
         lpStatus->fwRetainBin = WFS_IDC_RETAINNOTSUPP;
         // Модуль безопасноси отсутствует
@@ -116,7 +112,7 @@ public:// Функции, вызываемые в WFPGetInfo
         // то данный параметр не имеет смысла.
         //TODO Хотя, может быть, можно будет его отслеживать как количество вытащенных карт.
         lpStatus->usCards = 0;
-        lpStatus->fwChipPower = state.translateChipPower();
+        lpStatus->fwChipPower = st ? state.translateChipPower() : WFS_IDC_CHIPNOCARD;
         //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
         return std::make_pair(lpStatus, st);
     }
@@ -140,7 +136,7 @@ public:// Функции, вызываемые в WFPGetInfo
         // Какие треки могут быть записаны -- никакие, только чип.
         lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
         // Виды поддерживаемых картой протоколов.
-        lpCaps->fwChipProtocols = ProtocolTypes(types).translate();
+        lpCaps->fwChipProtocols = st ? ProtocolTypes(types).translate() : 0;
         // Максимальное количество карт, которое устройство может захватить. Всегда 0, т.к. не захватывает.
         lpCaps->usCards = 0;
         // Тип модуля безопасности. Не поддерживается.

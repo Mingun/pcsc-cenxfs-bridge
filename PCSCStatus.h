@@ -8,82 +8,84 @@
 #include <windef.h>
 
 /** Результат выполнения PC/SC функций. */
-struct Status {
-    LONG value;
-    Status(LONG rv) : value(rv) {}
+class Status : public Enum<LONG> {
+    typedef Enum<LONG> _Base;
+public:
+    Status(LONG value) : _Base(value) {}
 
     operator bool() const { return value == 0; }
 
-    inline const char* name() {
-        static const char* names[] = {
-            "SCARD_S_SUCCESS"                  , // NO_ERROR
-            "SCARD_F_INTERNAL_ERROR"           , // _HRESULT_TYPEDEF_(0x80100001L)
-            "SCARD_E_CANCELLED"                , // _HRESULT_TYPEDEF_(0x80100002L)
-            "SCARD_E_INVALID_HANDLE"           , // _HRESULT_TYPEDEF_(0x80100003L)
-            "SCARD_E_INVALID_PARAMETER"        , // _HRESULT_TYPEDEF_(0x80100004L)
-            "SCARD_E_INVALID_TARGET"           , // _HRESULT_TYPEDEF_(0x80100005L)
-            "SCARD_E_NO_MEMORY"                , // _HRESULT_TYPEDEF_(0x80100006L)
-            "SCARD_F_WAITED_TOO_LONG"          , // _HRESULT_TYPEDEF_(0x80100007L)
-            "SCARD_E_INSUFFICIENT_BUFFER"      , // _HRESULT_TYPEDEF_(0x80100008L)
-            "SCARD_E_UNKNOWN_READER"           , // _HRESULT_TYPEDEF_(0x80100009L)
-            "SCARD_E_TIMEOUT"                  , // _HRESULT_TYPEDEF_(0x8010000AL)
-            "SCARD_E_SHARING_VIOLATION"        , // _HRESULT_TYPEDEF_(0x8010000BL)
-            "SCARD_E_NO_SMARTCARD"             , // _HRESULT_TYPEDEF_(0x8010000CL)
-            "SCARD_E_UNKNOWN_CARD"             , // _HRESULT_TYPEDEF_(0x8010000DL)
-            "SCARD_E_CANT_DISPOSE"             , // _HRESULT_TYPEDEF_(0x8010000EL)
-            "SCARD_E_PROTO_MISMATCH"           , // _HRESULT_TYPEDEF_(0x8010000FL)
-            "SCARD_E_NOT_READY"                , // _HRESULT_TYPEDEF_(0x80100010L)
-            "SCARD_E_INVALID_VALUE"            , // _HRESULT_TYPEDEF_(0x80100011L)
-            "SCARD_E_SYSTEM_CANCELLED"         , // _HRESULT_TYPEDEF_(0x80100012L)
-            "SCARD_F_COMM_ERROR"               , // _HRESULT_TYPEDEF_(0x80100013L)
-            "SCARD_F_UNKNOWN_ERROR"            , // _HRESULT_TYPEDEF_(0x80100014L)
-            "SCARD_E_INVALID_ATR"              , // _HRESULT_TYPEDEF_(0x80100015L)
-            "SCARD_E_NOT_TRANSACTED"           , // _HRESULT_TYPEDEF_(0x80100016L)
-            "SCARD_E_READER_UNAVAILABLE"       , // _HRESULT_TYPEDEF_(0x80100017L)
-            "SCARD_P_SHUTDOWN"                 , // _HRESULT_TYPEDEF_(0x80100018L)
-            "SCARD_E_PCI_TOO_SMALL"            , // _HRESULT_TYPEDEF_(0x80100019L)
-            "SCARD_E_READER_UNSUPPORTED"       , // _HRESULT_TYPEDEF_(0x8010001AL)
-            "SCARD_E_DUPLICATE_READER"         , // _HRESULT_TYPEDEF_(0x8010001BL)
-            "SCARD_E_CARD_UNSUPPORTED"         , // _HRESULT_TYPEDEF_(0x8010001CL)
-            "SCARD_E_NO_SERVICE"               , // _HRESULT_TYPEDEF_(0x8010001DL)
-            "SCARD_E_SERVICE_STOPPED"          , // _HRESULT_TYPEDEF_(0x8010001EL)
-            "SCARD_E_UNEXPECTED"               , // _HRESULT_TYPEDEF_(0x8010001FL)
-            "SCARD_E_ICC_INSTALLATION"         , // _HRESULT_TYPEDEF_(0x80100020L)
-            "SCARD_E_ICC_CREATEORDER"          , // _HRESULT_TYPEDEF_(0x80100021L)
-            "SCARD_E_UNSUPPORTED_FEATURE"      , // _HRESULT_TYPEDEF_(0x80100022L)
-            "SCARD_E_DIR_NOT_FOUND"            , // _HRESULT_TYPEDEF_(0x80100023L)
-            "SCARD_E_FILE_NOT_FOUND"           , // _HRESULT_TYPEDEF_(0x80100024L)
-            "SCARD_E_NO_DIR"                   , // _HRESULT_TYPEDEF_(0x80100025L)
-            "SCARD_E_NO_FILE"                  , // _HRESULT_TYPEDEF_(0x80100026L)
-            "SCARD_E_NO_ACCESS"                , // _HRESULT_TYPEDEF_(0x80100027L)
-            "SCARD_E_WRITE_TOO_MANY"           , // _HRESULT_TYPEDEF_(0x80100028L)
-            "SCARD_E_BAD_SEEK"                 , // _HRESULT_TYPEDEF_(0x80100029L)
-            "SCARD_E_INVALID_CHV"              , // _HRESULT_TYPEDEF_(0x8010002AL)
-            "SCARD_E_UNKNOWN_RES_MNG"          , // _HRESULT_TYPEDEF_(0x8010002BL)
-            "SCARD_E_NO_SUCH_CERTIFICATE"      , // _HRESULT_TYPEDEF_(0x8010002CL)
-            "SCARD_E_CERTIFICATE_UNAVAILABLE"  , // _HRESULT_TYPEDEF_(0x8010002DL)
-            "SCARD_E_NO_READERS_AVAILABLE"     , // _HRESULT_TYPEDEF_(0x8010002EL)
-            "SCARD_E_COMM_DATA_LOST"           , // _HRESULT_TYPEDEF_(0x8010002FL)
-            "SCARD_E_NO_KEY_CONTAINER"         , // _HRESULT_TYPEDEF_(0x80100030L)
-            "SCARD_E_SERVER_TOO_BUSY"          , // _HRESULT_TYPEDEF_(0x80100031L)
-            NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,// xxx3x
-            NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,// xxx4x
-            NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,// xxx5x
-            NULL,NULL,NULL,NULL,NULL,// xxx6x
-            "SCARD_W_UNSUPPORTED_CARD"         , // _HRESULT_TYPEDEF_(0x80100065L)
-            "SCARD_W_UNRESPONSIVE_CARD"        , // _HRESULT_TYPEDEF_(0x80100066L)
-            "SCARD_W_UNPOWERED_CARD"           , // _HRESULT_TYPEDEF_(0x80100067L)
-            "SCARD_W_RESET_CARD"               , // _HRESULT_TYPEDEF_(0x80100068L)
-            "SCARD_W_REMOVED_CARD"             , // _HRESULT_TYPEDEF_(0x80100069L)
-            "SCARD_W_SECURITY_VIOLATION"       , // _HRESULT_TYPEDEF_(0x8010006AL)
-            "SCARD_W_WRONG_CHV"                , // _HRESULT_TYPEDEF_(0x8010006BL)
-            "SCARD_W_CHV_BLOCKED"              , // _HRESULT_TYPEDEF_(0x8010006CL)
-            "SCARD_W_EOF"                      , // _HRESULT_TYPEDEF_(0x8010006DL)
-            "SCARD_W_CANCELLED_BY_USER"        , // _HRESULT_TYPEDEF_(0x8010006EL)
-            "SCARD_W_CARD_NOT_AUTHENTICATED"   , // _HRESULT_TYPEDEF_(0x8010006FL)
-            "SCARD_W_CACHE_ITEM_NOT_FOUND"     , // _HRESULT_TYPEDEF_(0x80100070L)
-            "SCARD_W_CACHE_ITEM_STALE"         , // _HRESULT_TYPEDEF_(0x80100071L)
-            "SCARD_W_CACHE_ITEM_TOO_BIG"       , // _HRESULT_TYPEDEF_(0x80100072L)
+    inline CTString name() {
+        static CTString null;
+        static CTString names[] = {
+            CTString("SCARD_S_SUCCESS"                ), // NO_ERROR
+            CTString("SCARD_F_INTERNAL_ERROR"         ), // _HRESULT_TYPEDEF_(0x80100001L)
+            CTString("SCARD_E_CANCELLED"              ), // _HRESULT_TYPEDEF_(0x80100002L)
+            CTString("SCARD_E_INVALID_HANDLE"         ), // _HRESULT_TYPEDEF_(0x80100003L)
+            CTString("SCARD_E_INVALID_PARAMETER"      ), // _HRESULT_TYPEDEF_(0x80100004L)
+            CTString("SCARD_E_INVALID_TARGET"         ), // _HRESULT_TYPEDEF_(0x80100005L)
+            CTString("SCARD_E_NO_MEMORY"              ), // _HRESULT_TYPEDEF_(0x80100006L)
+            CTString("SCARD_F_WAITED_TOO_LONG"        ), // _HRESULT_TYPEDEF_(0x80100007L)
+            CTString("SCARD_E_INSUFFICIENT_BUFFER"    ), // _HRESULT_TYPEDEF_(0x80100008L)
+            CTString("SCARD_E_UNKNOWN_READER"         ), // _HRESULT_TYPEDEF_(0x80100009L)
+            CTString("SCARD_E_TIMEOUT"                ), // _HRESULT_TYPEDEF_(0x8010000AL)
+            CTString("SCARD_E_SHARING_VIOLATION"      ), // _HRESULT_TYPEDEF_(0x8010000BL)
+            CTString("SCARD_E_NO_SMARTCARD"           ), // _HRESULT_TYPEDEF_(0x8010000CL)
+            CTString("SCARD_E_UNKNOWN_CARD"           ), // _HRESULT_TYPEDEF_(0x8010000DL)
+            CTString("SCARD_E_CANT_DISPOSE"           ), // _HRESULT_TYPEDEF_(0x8010000EL)
+            CTString("SCARD_E_PROTO_MISMATCH"         ), // _HRESULT_TYPEDEF_(0x8010000FL)
+            CTString("SCARD_E_NOT_READY"              ), // _HRESULT_TYPEDEF_(0x80100010L)
+            CTString("SCARD_E_INVALID_VALUE"          ), // _HRESULT_TYPEDEF_(0x80100011L)
+            CTString("SCARD_E_SYSTEM_CANCELLED"       ), // _HRESULT_TYPEDEF_(0x80100012L)
+            CTString("SCARD_F_COMM_ERROR"             ), // _HRESULT_TYPEDEF_(0x80100013L)
+            CTString("SCARD_F_UNKNOWN_ERROR"          ), // _HRESULT_TYPEDEF_(0x80100014L)
+            CTString("SCARD_E_INVALID_ATR"            ), // _HRESULT_TYPEDEF_(0x80100015L)
+            CTString("SCARD_E_NOT_TRANSACTED"         ), // _HRESULT_TYPEDEF_(0x80100016L)
+            CTString("SCARD_E_READER_UNAVAILABLE"     ), // _HRESULT_TYPEDEF_(0x80100017L)
+            CTString("SCARD_P_SHUTDOWN"               ), // _HRESULT_TYPEDEF_(0x80100018L)
+            CTString("SCARD_E_PCI_TOO_SMALL"          ), // _HRESULT_TYPEDEF_(0x80100019L)
+            CTString("SCARD_E_READER_UNSUPPORTED"     ), // _HRESULT_TYPEDEF_(0x8010001AL)
+            CTString("SCARD_E_DUPLICATE_READER"       ), // _HRESULT_TYPEDEF_(0x8010001BL)
+            CTString("SCARD_E_CARD_UNSUPPORTED"       ), // _HRESULT_TYPEDEF_(0x8010001CL)
+            CTString("SCARD_E_NO_SERVICE"             ), // _HRESULT_TYPEDEF_(0x8010001DL)
+            CTString("SCARD_E_SERVICE_STOPPED"        ), // _HRESULT_TYPEDEF_(0x8010001EL)
+            CTString("SCARD_E_UNEXPECTED"             ), // _HRESULT_TYPEDEF_(0x8010001FL)
+            CTString("SCARD_E_ICC_INSTALLATION"       ), // _HRESULT_TYPEDEF_(0x80100020L)
+            CTString("SCARD_E_ICC_CREATEORDER"        ), // _HRESULT_TYPEDEF_(0x80100021L)
+            CTString("SCARD_E_UNSUPPORTED_FEATURE"    ), // _HRESULT_TYPEDEF_(0x80100022L)
+            CTString("SCARD_E_DIR_NOT_FOUND"          ), // _HRESULT_TYPEDEF_(0x80100023L)
+            CTString("SCARD_E_FILE_NOT_FOUND"         ), // _HRESULT_TYPEDEF_(0x80100024L)
+            CTString("SCARD_E_NO_DIR"                 ), // _HRESULT_TYPEDEF_(0x80100025L)
+            CTString("SCARD_E_NO_FILE"                ), // _HRESULT_TYPEDEF_(0x80100026L)
+            CTString("SCARD_E_NO_ACCESS"              ), // _HRESULT_TYPEDEF_(0x80100027L)
+            CTString("SCARD_E_WRITE_TOO_MANY"         ), // _HRESULT_TYPEDEF_(0x80100028L)
+            CTString("SCARD_E_BAD_SEEK"               ), // _HRESULT_TYPEDEF_(0x80100029L)
+            CTString("SCARD_E_INVALID_CHV"            ), // _HRESULT_TYPEDEF_(0x8010002AL)
+            CTString("SCARD_E_UNKNOWN_RES_MNG"        ), // _HRESULT_TYPEDEF_(0x8010002BL)
+            CTString("SCARD_E_NO_SUCH_CERTIFICATE"    ), // _HRESULT_TYPEDEF_(0x8010002CL)
+            CTString("SCARD_E_CERTIFICATE_UNAVAILABLE"), // _HRESULT_TYPEDEF_(0x8010002DL)
+            CTString("SCARD_E_NO_READERS_AVAILABLE"   ), // _HRESULT_TYPEDEF_(0x8010002EL)
+            CTString("SCARD_E_COMM_DATA_LOST"         ), // _HRESULT_TYPEDEF_(0x8010002FL)
+            CTString("SCARD_E_NO_KEY_CONTAINER"       ), // _HRESULT_TYPEDEF_(0x80100030L)
+            CTString("SCARD_E_SERVER_TOO_BUSY"        ), // _HRESULT_TYPEDEF_(0x80100031L)
+            null,null,null,null,null,null,null,null,null,null,null,null,null,null,// xxx3x
+            null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,// xxx4x
+            null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,// xxx5x
+            null,null,null,null,null,// xxx6x
+            CTString("SCARD_W_UNSUPPORTED_CARD"       ), // _HRESULT_TYPEDEF_(0x80100065L)
+            CTString("SCARD_W_UNRESPONSIVE_CARD"      ), // _HRESULT_TYPEDEF_(0x80100066L)
+            CTString("SCARD_W_UNPOWERED_CARD"         ), // _HRESULT_TYPEDEF_(0x80100067L)
+            CTString("SCARD_W_RESET_CARD"             ), // _HRESULT_TYPEDEF_(0x80100068L)
+            CTString("SCARD_W_REMOVED_CARD"           ), // _HRESULT_TYPEDEF_(0x80100069L)
+            CTString("SCARD_W_SECURITY_VIOLATION"     ), // _HRESULT_TYPEDEF_(0x8010006AL)
+            CTString("SCARD_W_WRONG_CHV"              ), // _HRESULT_TYPEDEF_(0x8010006BL)
+            CTString("SCARD_W_CHV_BLOCKED"            ), // _HRESULT_TYPEDEF_(0x8010006CL)
+            CTString("SCARD_W_EOF"                    ), // _HRESULT_TYPEDEF_(0x8010006DL)
+            CTString("SCARD_W_CANCELLED_BY_USER"      ), // _HRESULT_TYPEDEF_(0x8010006EL)
+            CTString("SCARD_W_CARD_NOT_AUTHENTICATED" ), // _HRESULT_TYPEDEF_(0x8010006FL)
+            CTString("SCARD_W_CACHE_ITEM_NOT_FOUND"   ), // _HRESULT_TYPEDEF_(0x80100070L)
+            CTString("SCARD_W_CACHE_ITEM_STALE"       ), // _HRESULT_TYPEDEF_(0x80100071L)
+            CTString("SCARD_W_CACHE_ITEM_TOO_BIG"     ), // _HRESULT_TYPEDEF_(0x80100072L)
         };
         //  Values are 32 bit values laid out as follows:
         //

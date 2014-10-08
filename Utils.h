@@ -2,6 +2,8 @@
 #define PCSC_CENXFS_BRIDGE_Utils_H
 
 #pragma once
+// Для std::size_t
+#include <cstddef>
 // Для WFMAllocateBuffer
 #include <xfsadmin.h>
 
@@ -40,5 +42,57 @@ static T* xfsAlloc() {
     assert(h >= 0 && "Cannot allocate memory");
     return result;
 }
+
+
+template<typename T, class Derived>
+class Enum {
+    static const T defaultMask = ~((T)0);
+protected:
+    T value;
+    template<class OS>
+    friend inline OS& operator<<(OS& os, Enum<T, Derived> e) {
+        return os << e.derived().name() << " (0x"
+                  // На каждый байт требуется 2 символа.
+                  << std::hex << std::setw(2*sizeof(e.value)) << std::setfill('0')
+                  << e.value << ")";
+    }
+protected:
+    Enum(T value) : value(value) {}
+
+    bool name(const CTString* names, std::size_t begin, std::size_t end, T mask, CTString& result) const {
+        T val = value & mask;
+        if (val < begin || val > end) {
+            result = CTString("<unknown>");
+            return false;
+        }
+        result = names[val];
+        return true;
+    }
+    inline bool name(const CTString* names, std::size_t begin, std::size_t end, CTString& result) const {
+        return name(names, begin, end, defaultMask, result);
+    }
+    template<std::size_t N>
+    inline bool name(CTString (&names)[N], T mask, CTString& result) const {
+        return name(names, 0, N, mask, result);
+    }
+    template<std::size_t N>
+    inline bool name(CTString (&names)[N], CTString& result) const {
+        return name(names, 0, N, defaultMask, result);
+    }
+    template<std::size_t N>
+    inline CTString name(CTString (&names)[N], T mask) const {
+        CTString result;
+        name(names, 0, N, mask, result);
+        return result;
+    }
+    template<std::size_t N>
+    inline CTString name(CTString (&names)[N]) const {
+        CTString result;
+        name(names, 0, N, defaultMask, result);
+        return result;
+    }
+private:
+    Derived& derived() const { return *((Derived*)this); }
+};
 
 #endif // PCSC_CENXFS_BRIDGE_Utils_H
