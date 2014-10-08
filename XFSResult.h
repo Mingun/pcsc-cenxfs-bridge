@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cassert>
+
 // Для REQUESTID, HSERVICE, HRESULT, LONG и DWORD
 #include <windef.h>
 // Для PostMessage
@@ -12,6 +14,7 @@
 // Определения для ридеров карт (Identification card unit (IDC)), для WFMAllocateBuffer и WFSRESULT
 #include <XFSIDC.h>
 
+#include "Utils.h"
 #include "PCSCStatus.h"
 
 class Result {
@@ -23,6 +26,7 @@ public:
     Result(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
         init(ReqID, hService, result);
     }
+public:// Заполнение результатов команд WFPGetInfo
     /// Прикрепляет к результату указанные данные статуса.
     inline Result& data(WFSIDCSTATUS* data) {
         assert(pResult != NULL);
@@ -37,6 +41,22 @@ public:
         pResult->lpBuffer = data;
         return *this;
     }
+public:// Заполнение результатов команд WFPExecute
+    /// Прикрепляет к результату указанные данные возможностей устройства.
+    inline Result& data(WFSIDCCARDDATA* data) {
+        assert(pResult != NULL);
+        pResult->u.dwCommandCode = WFS_CMD_IDC_READ_RAW_DATA;
+        pResult->lpBuffer = data;
+        return *this;
+    }
+    /// Прикрепляет к результату указанные данные возможностей устройства.
+    inline Result& data(WFSIDCCHIPIO* data) {
+        assert(pResult != NULL);
+        pResult->u.dwCommandCode = WFS_CMD_IDC_CHIP_IO;
+        pResult->lpBuffer = data;
+        return *this;
+    }
+public:
     /// Прикрепляет к результату указанные данные возможностей устройства.
     inline Result& data(WFSDEVSTATUS* data) {
         assert(pResult != NULL);
@@ -49,8 +69,7 @@ public:
     }
 private:
     inline void init(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
-        // Выделяем память, заполняем ее нулями на всякий случай.
-        WFMAllocateBuffer(sizeof(WFSRESULT), WFS_MEM_ZEROINIT, (void**)&pResult);
+        pResult = xfsAlloc<WFSRESULT>();
         pResult->RequestID = ReqID;
         pResult->hService = hService;
         pResult->hResult = result;

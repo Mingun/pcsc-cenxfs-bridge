@@ -274,7 +274,7 @@ HRESULT DLL_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
         }
         case WFS_INF_IDC_CAPABILITIES: {// Дополнительных параметров нет
             std::pair<WFSIDCCAPS*, Status> caps = pcsc.get(hService).getCaps();
-            Result(ReqID, hService, status.second).data(caps.first).send(hWnd, WFS_GETINFO_COMPLETE);
+            Result(ReqID, hService, caps.second).data(caps.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_FORM_LIST:
@@ -342,7 +342,7 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             return WFS_ERR_UNSUPP_COMMAND;
         }
         // Команда на захват карты считывателем. Аналогично предудущей команде.
-        case WFS_CMD_IDC_RETAIN_CARD {// Входных параметров нет.
+        case WFS_CMD_IDC_RETAIN_CARD: {// Входных параметров нет.
             return WFS_ERR_UNSUPP_COMMAND;
         }
         // Команда на сброс счетчика захваченных карт. Так как мы их не звахватываем, то не поддерживаем.
@@ -367,7 +367,7 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             WORD lpwReadData = *((WORD*)lpCmdData);
             if (lpwReadData & WFS_IDC_CHIP) {
                 std::pair<WFSIDCCARDDATA*, Status> result = pcsc.get(hService).read();
-                Result(ReqID, hService, status.second).data(status.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+                Result(ReqID, hService, result.second).data(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
                 return WFS_SUCCESS;
             }
             return WFS_ERR_UNSUPP_COMMAND;
@@ -385,7 +385,7 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             }
             WFSIDCCHIPIO* data = (WFSIDCCHIPIO*)lpCmdData;
             std::pair<WFSIDCCHIPIO*, Status> result = pcsc.get(hService).transmit(data);
-            Result(ReqID, hService, status.second).data(status.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+            Result(ReqID, hService, result.second).data(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
             return WFS_SUCCESS;
         }
         // Отключает питание чипа.

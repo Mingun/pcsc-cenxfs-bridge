@@ -4,6 +4,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 
 // PC/CS API
 #include <winscard.h>
