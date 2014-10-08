@@ -95,7 +95,7 @@ public:// Функции, вызываемые в WFPGetInfo
         log("SCardStatus: ", st);
 
         if (!st) {
-            return std::make_pair(NULL, st);
+            return std::make_pair((WFSIDCSTATUS*)NULL, st);
         }
 
         WFSIDCSTATUS* lpStatus = xfsAlloc<WFSIDCSTATUS>();
@@ -113,7 +113,7 @@ public:// Функции, вызываемые в WFPGetInfo
         lpStatus->usCards = 0;
         lpStatus->fwChipPower = state.translateChipPower();
         //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
-        return return std::make_pair(lpStatus, st);
+        return std::make_pair(lpStatus, st);
     }
     std::pair<WFSIDCCAPS*, Status> getCaps() {
         WFSIDCCAPS* lpCaps = xfsAlloc<WFSIDCCAPS>();
@@ -121,7 +121,7 @@ public:// Функции, вызываемые в WFPGetInfo
         // Получаем поддерживаемые картой протоколы.
         DWORD types;
         DWORD len = sizeof(DWORD);
-        Status st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (char *)&types, &len);
+        Status st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (BYTE*)&types, &len);
         log("SCardGetAttrib(SCARD_ATTR_PROTOCOL_TYPES)", st);
 
         // Устройство является считывателем карт.
@@ -167,7 +167,7 @@ public:// Функции, вызываемые в WFPExecute
         // который вернула SCardGetAttrib.
         data->wStatus = WFS_IDC_DATAOK;
         // Получаем ATR (Answer To Reset).
-        Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, (char *)&data->ulDataLength, &data->lpbData);
+        Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
         return std::make_pair(data, st);
     }
     std::pair<WFSIDCCHIPIO*, Status> transmit(WFSIDCCHIPIO* input) {
@@ -176,11 +176,10 @@ public:// Функции, вызываемые в WFPExecute
         WFSIDCCHIPIO* result = xfsAlloc<WFSIDCCHIPIO>();
         result->wChipProtocol = input->wChipProtocol;
 
-        SCARD_IO_REQUEST ioRq;//TODO: Получить протокол.
-        SCARD_IO_REQUEST ioRs;//TODO: Получить протокол.
+        SCARD_IO_REQUEST ioRq = {0};//TODO: Получить протокол.
         Status st = SCardTransmit(hCard,
-            &ioRq, input->lpbChipData, input->ulChipDataLength
-            NULL, result->lpbChipData, result->ulChipDataLength
+            &ioRq, input->lpbChipData, input->ulChipDataLength,
+            NULL, result->lpbChipData, &result->ulChipDataLength
         );
         log("SCardTransmit", st);
 

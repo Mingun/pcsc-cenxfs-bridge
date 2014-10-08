@@ -54,7 +54,7 @@ public:
     }
     void notify(DWORD event, WFSRESULT* result) const {
         if (mask & event) {
-            PostMessage(hWnd, (DWORD)event, 0, result);
+            PostMessage(hWnd, (DWORD)event, 0, (LPARAM)result);
         }
     }
 };
