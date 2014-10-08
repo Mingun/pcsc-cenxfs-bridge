@@ -9,8 +9,6 @@
 #include <map>
 #include <cassert>
 
-// CEN/XFS API
-#include <xfsspi.h>
 // PC/CS API
 #include <winscard.h>
 // Определения для ридеров карт (Identification card unit (IDC))
@@ -18,7 +16,7 @@
 
 #include "Card.h"
 #include "PCSCStatus.h"
-#include "ReaderState.h"
+#include "PCSCReaderState.h"
 
 // Линкуемся с библиотекой реализации стандарта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")

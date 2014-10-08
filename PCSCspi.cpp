@@ -1,6 +1,7 @@
 
-// CEN/XFS API
-#include <xfsspi.h>
+// CEN/XFS API -- Наш файл, так как оригинальный предназначен для использования
+// клиентами, а нам надо экспортировать функции, а не импортировать их.
+#include "xfsspi.h"
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
 // Для std::pair
@@ -18,7 +19,6 @@
 #pragma comment(lib, "user32.lib")
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
-#define DLL_API __declspec(dllexport)
 
 
 /** При загрузке DLL будут вызваны конструкторы всех глобальных объектов и установится
@@ -26,7 +26,7 @@
     объектов и соединение автоматически закроется.
 */
 PCSC pcsc;
-
+extern "C" {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 /** Устанавливает сессию с подсистемой PC/SC.
@@ -51,7 +51,7 @@ PCSC pcsc;
 @param lpSrvcVersion Информация об открытом соединении, специфичная для вида провайдера (карточный ридер)
        (выходной параметр).
 */
-HRESULT DLL_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName, 
+HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName, 
                         HAPP hApp, LPSTR lpszAppID, 
                         DWORD dwTraceLevel, DWORD dwTimeOut, 
                         HWND hWnd, REQUESTID ReqID,
@@ -114,7 +114,7 @@ HRESULT DLL_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
 @param ReqId Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
-HRESULT DLL_API WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
+HRESULT SPI_API WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     pcsc.close(hService);
@@ -143,7 +143,7 @@ HRESULT DLL_API WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
-HRESULT DLL_API WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
+HRESULT SPI_API WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     // Регистрируем событие для окна.
@@ -174,7 +174,7 @@ HRESULT DLL_API WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
-HRESULT DLL_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
+HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     pcsc.get(hService).remove(hWndReg, dwEventClass);
@@ -203,7 +203,7 @@ HRESULT DLL_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
-HRESULT DLL_API WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+HRESULT SPI_API WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     pcsc.get(hService).lock(ReqID).send(hWnd, WFS_SUCCESS);
@@ -230,7 +230,7 @@ HRESULT DLL_API WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
-HRESULT DLL_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
+HRESULT SPI_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
 
@@ -262,7 +262,7 @@ HRESULT DLL_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
-HRESULT DLL_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDetails, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDetails, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
@@ -320,7 +320,7 @@ HRESULT DLL_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
 @param hWnd Окно, которое должно получить сообщение о завершении асинхронной операции.
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
-HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
 
@@ -447,7 +447,7 @@ HRESULT DLL_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
 @param ReqID Идентификатор запроса для отмены или `NULL`, если необходимо отменить все запросы
        для указанного сервися `hService`.
 */
-HRESULT DLL_API WFPCancelAsyncRequest(HSERVICE hService, REQUESTID ReqID) {
+HRESULT SPI_API WFPCancelAsyncRequest(HSERVICE hService, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     // Возможные коды завершения функции:
@@ -457,7 +457,7 @@ HRESULT DLL_API WFPCancelAsyncRequest(HSERVICE hService, REQUESTID ReqID) {
     // WFS_ERR_INVALID_REQ_ID //The RequestID parameter does not correspond to an outstanding request on the service.
     return WFS_ERR_UNSUPP_COMMAND;
 }
-HRESULT DLL_API WFPSetTraceLevel(HSERVICE hService, DWORD dwTraceLevel) {
+HRESULT SPI_API WFPSetTraceLevel(HSERVICE hService, DWORD dwTraceLevel) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     // Возможные коды завершения функции:
@@ -470,7 +470,7 @@ HRESULT DLL_API WFPSetTraceLevel(HSERVICE hService, DWORD dwTraceLevel) {
     return WFS_SUCCESS;
 }
 /** Вызывается XFS для определения того, можно ли выгрузить DLL с данным сервис-провайдером прямо сейчас. */
-HRESULT DLL_API WFPUnloadService() {
+HRESULT SPI_API WFPUnloadService() {
     // Возможные коды завершения функции:
     // WFS_ERR_NOT_OK_TO_UNLOAD
     //     The XFS Manager may not unload the service provider DLL at this time. It will repeat this
@@ -480,3 +480,4 @@ HRESULT DLL_API WFPUnloadService() {
     // Нас всегда можно выгрузить.
     return WFS_SUCCESS;
 }
+} // extern "C"

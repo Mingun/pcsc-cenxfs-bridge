@@ -6,11 +6,15 @@
 #include <string>
 #include <sstream>
 
+// CEN/XFS API -- Для WFMOutputTraceData
+#include <xfsadmin.h>
 // PC/CS API
 #include <winscard.h>
 
+#include "Utils.h"
 #include "EventSupport.h"
 #include "XFSResult.h"
+#include "PCSCMediaStatus.h"
 
 class ProtocolTypes {
     DWORD value;
