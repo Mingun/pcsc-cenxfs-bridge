@@ -18,13 +18,10 @@
 /** Класс для представления состояния устройств. Позволяет преобразовать состояния в XFS
     состояния и распечатать набор текущих флагов.
 */
-class ReaderState {
-    DWORD value;
-    
-    template<class OS>
-    friend OS& operator<<(OS& os, ReaderState s);
+class ReaderState : public Flags<DWORD, ReaderState> {
+    typedef Flags<DWORD, ReaderState> _Base;
 public:
-    ReaderState(DWORD value) : value(value) {}
+    ReaderState(DWORD value) : _Base(value) {}
     DWORD translate() {
         DWORD result = 0;
         // Считыватель должен быть проигнорирован
@@ -66,7 +63,7 @@ public:
         return result;
     }
 
-    const std::vector<CTString> flagNames() {
+    const std::vector<CTString> flagNames() const {
         static CTString names[] = {
             CTString("SCARD_STATE_UNAWARE"    ),// 0x0000    App wants status.
             CTString("SCARD_STATE_IGNORE"     ),// 0x0001    Ignore this reader.
@@ -81,39 +78,8 @@ public:
             CTString("SCARD_STATE_MUTE"       ),// 0x0200    Unresponsive card.
             CTString("SCARD_STATE_UNPOWERED"  ),// 0x0400    Unpowered card.
         };
-        const std::size_t size = sizeof(names)/sizeof(names[0]);
-        std::vector<CTString> result(size);
-        int i = -1;
-        result[++i] = (value & SCARD_STATE_UNAWARE    ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_IGNORE     ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_CHANGED    ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_UNKNOWN    ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_UNAVAILABLE) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_EMPTY      ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_PRESENT    ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_ATRMATCH   ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_EXCLUSIVE  ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_INUSE      ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_MUTE       ) ? names[i] : CTString();
-        result[++i] = (value & SCARD_STATE_UNPOWERED  ) ? names[i] : CTString();
-        return result;
+        return _Base::flagNames(names);
     }
 };
-template<class OS>
-inline OS& operator<<(OS& os, ReaderState s) {
-    os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(s.value)) << '(';
-    std::vector<CTString> names = s.flagNames();
-    bool first = true;
-    for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {
-        if (!it->isValid())
-            continue;
-        if (!first) {
-            os << ", ";
-        }
-        os << *it;
-        first = false;
-    }
-    return os << ')';
-}
 
 #endif // PCSC_CENXFS_BRIDGE_ReaderState_H

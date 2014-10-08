@@ -2,6 +2,8 @@
 #define PCSC_CENXFS_BRIDGE_Utils_H
 
 #pragma once
+
+#include <vector>
 // Для std::size_t
 #include <cstddef>
 #include <cassert>
@@ -62,7 +64,7 @@ protected:
 
     bool name(const CTString* names, std::size_t begin, std::size_t end, T mask, CTString& result) const {
         T val = value & mask;
-        if (val < begin || val > end) {
+        if (val < (T)begin || val > (T)end) {
             result = CTString("<unknown>");
             return false;
         }
@@ -90,6 +92,47 @@ protected:
     inline CTString name(CTString (&names)[N]) const {
         CTString result;
         name(names, 0, N, defaultMask, result);
+        return result;
+    }
+private:
+    Derived& derived() const { return *((Derived*)this); }
+};
+
+template<typename T, class Derived>
+class Flags {
+protected:
+    T value;
+    template<class OS>
+    friend inline OS& operator<<(OS& os, Flags<T, Derived> f) {
+        os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(s.value)) << '(';
+        std::vector<CTString> names = f.derived().flagNames();
+        bool first = true;
+        for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {
+            // Пустые значения не добавляем в список.
+            if (!it->isValid())
+                continue;
+            if (!first) {
+                os << ", ";
+            }
+            os << *it;
+            first = false;
+        }
+        return os << ')';
+    }
+protected:
+    Flags(T value) : value(value) {}
+
+    template<std::size_t N>
+    inline std::vector<CTString> flagNames(CTString (&names)[N]) const {
+        std::vector<CTString> result(N);
+        if (value == (T)0) {
+            result[0] = names[0];
+        }
+        for (std::size_t i = 1; i < N; ++i) {
+            if (value & (1 << i)) {
+                result[i] = names[i];
+            }
+        }
         return result;
     }
 private:
