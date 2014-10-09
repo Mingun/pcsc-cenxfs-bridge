@@ -272,7 +272,7 @@ HRESULT SPI_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 */
 HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDetails, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
-        return WFS_ERR_CONNECTION_LOST;
+        return WFS_ERR_INVALID_HSERVICE;
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
     switch (dwCategory) {
         case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет

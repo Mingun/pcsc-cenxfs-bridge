@@ -42,15 +42,27 @@ class EventCreator {
 public:
     EventCreator(HSERVICE hService, SCARD_READERSTATE& state) : hService(hService), state(state) {}
     Result operator()() const {
+        // Первый и третий параметры не имеют значения.
+        Result r = Result(0, hService, WFS_SUCCESS);
+
+        // Если вставлена карта, сразу же ее открываем.
+        if (state.dwEventState & SCARD_STATE_PRESENT) {
+            //service.open(state.szReader);
+            return r.cardInserted();
+        }
+        // Если карта вытащена, закрываем ее.
+        if (state.dwEventState & SCARD_STATE_EMPTY) {
+            //service.close();
+            return r.cardRemoved();
+        }
+
         WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
         // Имя физичеcкого устройства, чье состояние изменилось
         strcpy(status->lpszPhysicalName, state.szReader);
         // Рабочая станция, на которой запущен сервис.
         status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
         status->dwState = ReaderState(state.dwEventState).translate();
-
-        // Первый и третий параметры не имеют значения.
-        return Result(0, hService, WFS_SUCCESS).data(status);
+        return r.data(status);
     }
 };
 class Service : public EventNotifier {
@@ -80,6 +92,7 @@ public:
     }
 
     Status open(SCARDCONTEXT hContext) {
+        assert(hCard == 0 && "Must open only one card at one service");
         Status st = SCardConnect(hContext, readerName.c_str(), SCARD_SHARE_SHARED,
             // У нас нет предпочитаемого протокола, работаем с тем, что дают
             SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
@@ -90,6 +103,7 @@ public:
         return st;
     }
     Status close() {
+        assert(hCard != 0 && "Attempt disconnect from non-connected card");
         // При закрытии соединения ничего не делаем с карточкой, оставляем ее в считывателе.
         Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
         log("SCardDisconnect", st);

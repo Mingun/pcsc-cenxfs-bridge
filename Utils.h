@@ -36,13 +36,21 @@ inline OS& operator<<(OS& os, CTString s) {
 /** Функция, выделяющая память под структуру указанного типа менеджером памяти XFS.
     Память, выделенная данной функцие, должна быть освобождена вызовом функции
     `WFMFreeBuffer` (если указатель отдается вызывающему, это делает клиент DLL).
-@tparam T Тип структуры, для котороы выделяется память. Конструктор не вызывается.
+@tparam T Тип структуры, для которой выделяется память. Конструктор не вызывается.
 */
 template<typename T>
 static T* xfsAlloc() {
     T* result = 0;
     HRESULT h = WFMAllocateBuffer(sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
     assert(h >= 0 && "Cannot allocate memory");
+    return result;
+}
+template<typename T>
+static T* xfsAlloc(const T& value) {
+    T* result = 0;
+    HRESULT h = WFMAllocateBuffer(sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
+    assert(h >= 0 && "Cannot allocate memory");
+    *result = value;
     return result;
 }
 

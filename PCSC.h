@@ -133,8 +133,10 @@ private:
         for (std::vector<SCARD_READERSTATE>::iterator it = readers.begin(); it != readers.end(); ++it) {
             // Cообщаем PC/SC, что мы знаем текущее состояние
             it->dwCurrentState = it->dwEventState;
-
-            notifyChanges(*it);
+            // Если что-то изменилось, уведомляем об этом всех заинтересованных.
+            if (it->dwEventState & SCARD_STATE_CHANGED) {
+                notifyChanges(*it);
+            }
         }
     }
     void notifyChanges(SCARD_READERSTATE& state) const {

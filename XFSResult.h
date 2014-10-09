@@ -96,11 +96,34 @@ public:
     /// Прикрепляет к результату указанные данные возможностей устройства.
     inline Result& data(WFSDEVSTATUS* data) {
         assert(pResult != NULL);
+        assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwEventID = WFS_SYSE_DEVICE_STATUS;
         pResult->lpBuffer = data;
         return *this;
     }
+public:// События доступности карты в считывателе.
+    /// Событие генерируется, когда считыватель обнаруживает, что в него вставлена карта.
+    inline Result& cardInserted() {
+        assert(pResult != NULL);
+        pResult->u.dwEventID = WFS_EXEE_IDC_MEDIAINSERTED;
+    }
+    /// Событие генерируется, когда считыватель обнаруживает, что из него вытащена карта.
+    inline Result& cardRemoved() {
+        assert(pResult != NULL);
+        pResult->u.dwEventID = WFS_SRVE_IDC_MEDIAREMOVED;
+    }
+    /// Генерируется, если карта была обнаружена в считывателе во время команды
+    /// сброса (WFS_CMD_IDC_RESET). Так как карта обнаружена, считается, что она
+    /// готова к чтению.
+    /// TODO: Это может быть не так?
+    inline Result& cardDetected() {
+        assert(pResult != NULL);
+        assert(pResult->lpBuffer == NULL && "Result already has data!");
+        pResult->u.dwEventID = WFS_SRVE_IDC_MEDIADETECTED;
+        pResult->lpBuffer = xfsAlloc<DWORD>(WFS_IDC_CARDREADPOSITION);
+    }
     void send(HWND hWnd, DWORD messageType) {
+        assert(pResult != NULL);
         PostMessage(hWnd, messageType, NULL, (LPARAM)pResult);
     }
 private:
@@ -110,6 +133,8 @@ private:
         pResult->hService = hService;
         pResult->hResult = result;
         GetSystemTime(&pResult->tsTimestamp);
+
+        assert(pResult->lpBuffer == NULL);
     }
 };
 
