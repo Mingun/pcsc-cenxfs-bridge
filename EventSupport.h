@@ -11,6 +11,8 @@
 // Для PostMessage
 #include <winuser.h>
 
+#include "XFSResult.h"
+
 class EventSubscriber {
     /// Окно, которое должно получать указанные события.
     HWND hWnd;
@@ -52,9 +54,9 @@ public:
         mask &= ~event;
         return mask == 0;
     }
-    void notify(DWORD event, WFSRESULT* result) const {
+    void notify(DWORD event, Result result) const {
         if (mask & event) {
-            PostMessage(hWnd, (DWORD)event, 0, (LPARAM)result);
+            result.send(hWnd, event);
         }
     }
 };
@@ -105,11 +107,15 @@ public:
     void clear() {
         subscribers.clear();
     }
-    /// Уведомляет всех подписчиков об указанном событии.
-    void notify(DWORD event, WFSRESULT* result) const {
+    /** Уведомляет всех подписчиков об указанном событии.
+    @param resultGenerator Функция, которая должна вернуть результат типа Result.
+           Данная функция вызывается для каждого подписчика на событие. 
+    */
+    template<class F>
+    void notify(DWORD event, F resultGenerator) const {
+        SubscriberList::const_iterator end = subscribers.end();
         for (SubscriberList::const_iterator it = subscribers.begin(); it != subscribers.end(); ++it) {
-            //TODO: Копирование result -- чтобы у каждого подписчика был свой.
-            it->notify(event, result);
+            it->notify(event, resultGenerator());
         }
     }
 };

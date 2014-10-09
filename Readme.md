@@ -7,9 +7,11 @@ PC/SC-CEN/XFS-bridge
 Порядок открытия сервис-провайдера Kalignite-ом
 -----------------------------------------------
 
-1. Загрузка библиотеки с реазизацией сервис-провайдера
-2. Вызов `WFPOpen(?, "CardReader", 0, "Kalignite App CFRJ", ?, 120000, ...)`
-3. Вызов со  всеми классами событий `WFPRegister(?, SERVICE_EVENTS | USER_EVENTS | SYSTEM_EVENTS | EXECUTE_EVENTS, ...)`
+1. Загрузка библиотеки с реализацией сервис-провайдера. В этот момент устанавливается подключение к
+   подсистеме PC/SC: `SCardEstablishConnect`.
+2. Вызов `WFPOpen(?, "CardReader", 0, "Kalignite App CFRJ", ?, 120000, ...)`. В этот момент осуществляется
+   поиск PC/SC считывателей.
+3. Вызов со всеми классами событий `WFPRegister(?, SERVICE_EVENTS | USER_EVENTS | SYSTEM_EVENTS | EXECUTE_EVENTS, ...)`
 4. Установка уровня трассировки провайдера `WFMSetTraceLevel(...)`
 5. Получение статуса считывателя `WFPGetInfo(?, WFS_INF_IDC_STATUS, 0, dwTimeOut=300000, ...)`
 5. Получение возможностей считывателя `WFPGetInfo(?, WFS_INF_IDC_CAPABILITIES, 0, dwTimeOut=300000, ...)`
