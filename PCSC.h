@@ -14,7 +14,7 @@
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
 
-#include "Card.h"
+#include "Service.h"
 #include "PCSCStatus.h"
 #include "PCSCReaderState.h"
 
@@ -29,12 +29,12 @@
 class PCSC {
 public:
     /// Тип для отображения сервисов XFS на карты PC/SC.
-    typedef std::map<HSERVICE, Card*> CardMap;
+    typedef std::map<HSERVICE, Service*> ServiceMap;
 public:
     /// Контекст подсистемы PC/SC.
     SCARDCONTEXT hContext;
     /// Список карт, открытых для взаимодействия с системой XFS.
-    CardMap cards;
+    ServiceMap services;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
     PCSC() {
@@ -44,38 +44,60 @@ public:
     }
     /// Закрывает соединение к менеджеру подсистемы PC/SC.
     ~PCSC() {
-        for (CardMap::const_iterator it = cards.begin(); it != cards.end(); ++it) {
+        for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
             assert(it->second != NULL);
             delete it->second;
         }
-        cards.clear();
+        services.clear();
         Status st = SCardReleaseContext(hContext);
         log("SCardReleaseContext", st);
     }
     /** Проверяет, что указаный хендл сервиса является корректным хендлом карточки. */
     bool isValid(HSERVICE hService) {
-        return cards.find(hService) != cards.end();
+        return services.find(hService) != services.end();
     }
-    Card& open(HSERVICE hService, const char* name) {
+    Service& open(HSERVICE hService, const char* name) {
         // Конструктор устанавливает соединение с подсистемой PC/SC.
-        Card* card = new Card(hService, hContext, name);
-        cards.insert(std::make_pair(hService, card));
-        return *card;
+        Service* service = new Service(hService, name);
+        services.insert(std::make_pair(hService, service));
+        return *service;
     }
-    Card& get(HSERVICE hService) {
+    Service& get(HSERVICE hService) {
         assert(isValid(hService));
-        Card* card = cards.find(hService)->second;
-        assert(card != NULL);
-        return *card;
+        Service* service = services.find(hService)->second;
+        assert(service != NULL);
+        return *service;
     }
     void close(HSERVICE hService) {
         assert(isValid(hService));
-        CardMap::iterator it = cards.find(hService);
+        ServiceMap::iterator it = services.find(hService);
 
         assert(it->second != NULL);
         // Закрытие PC/SC соединения происхоидт в деструкторе Card.
         delete it->second;
-        cards.erase(it);
+        services.erase(it);
+    }
+public:// Подписка на события и генерация событий
+    /** Добавляет указанное окно к подписчикам на указанные события от указанного сервиса.
+    @return `false`, если указанный `hService` не зарегистрирован в объекте, иначе `true`.
+    */
+    bool addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
+        ServiceMap::iterator it = services.find(hService);
+        if (it == services.end()) {
+            return false;
+        }
+        assert(it->second != NULL);
+        it->second->add(hWndReg, dwEventClass);
+        return true;
+    }
+    bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
+        ServiceMap::iterator it = services.find(hService);
+        if (it == services.end()) {
+            return false;
+        }
+        assert(it->second != NULL);
+        it->second->remove(hWndReg, dwEventClass);
+        return true;
     }
 private:
     void prepareReadersState() {
@@ -97,6 +119,7 @@ private:
         for (std::vector<char>::const_iterator it = readerNames.begin(); it != readerNames.end(); ++it) {
             //it
         }
+        waitChanges(readers);
     }
     /** Данная блокирует выполнение до тех пор, пока не получит событие об изменении состояния
         физических устройств, поэтому она должна вызываться в отдельном потоке. После наступления
@@ -107,19 +130,17 @@ private:
         // Ждем его до бесконечности.
         Status st = SCardGetStatusChange(hContext, INFINITE, &readers[0], (DWORD)readers.size());
         log("SCardGetStatusChange", st);
+        for (std::vector<SCARD_READERSTATE>::iterator it = readers.begin(); it != readers.end(); ++it) {
+            // Cообщаем PC/SC, что мы знаем текущее состояние
+            it->dwCurrentState = it->dwEventState;
 
-        if (!st) {
-            return;
+            notifyChanges(*it);
         }
-        for (std::vector<SCARD_READERSTATE>::const_iterator it = readers.begin(); it != readers.end(); ++it) {
-            WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
-            // Имя физичеcкого устройства, чье состояние изменилось
-            strcpy(status->lpszPhysicalName, it->szReader);
-            // Рабочая станция, на которой запущен сервис.
-            status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
-            status->dwState = ReaderState(it->dwEventState).translate();
-
-            //Result(0, hService, 0).data(status).send();
+    }
+    void notifyChanges(SCARD_READERSTATE& state) const {
+        DWORD dwState = state.dwCurrentState;
+        for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
+            it->second->notify(WFS_EXECUTE_EVENT, state);
         }
     }
 private:

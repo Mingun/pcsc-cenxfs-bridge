@@ -144,10 +144,12 @@ HRESULT SPI_API WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT SPI_API WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
-    if (!pcsc.isValid(hService))
-        return WFS_ERR_INVALID_HSERVICE;
     // Регистрируем событие для окна.
-    pcsc.get(hService).add(hWndReg, dwEventClass);
+    if (!pcsc.addSubscriber(hService, hWndReg, dwEventClass)) {
+        // Если сервиса нет в PC/SC, то он потерян.
+        return WFS_ERR_INVALID_HSERVICE;
+    }
+    // Добавление подписчика всегда успешно.
     Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
@@ -175,10 +177,13 @@ HRESULT SPI_API WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg
 @param ReqID Идентификатора запроса, который нужно передать окну `hWnd` при завершении операции.
 */
 HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
-    if (!pcsc.isValid(hService))
+    // Отписываемся от событий. Если никого не было удалено, то никто не был зарегистрирован.
+    if (!pcsc.removeSubscriber(hService, hWndReg, dwEventClass) {
+        // Если сервиса нет в PC/SC, то он потерян.
         return WFS_ERR_INVALID_HSERVICE;
-    pcsc.get(hService).remove(hWndReg, dwEventClass);
-    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_DEREGISTER_COMPLETE);
+    }
+    // Удаление подписчика всегда успешно.
+    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED The request was canceled by WFSCancelAsyncRequest.
 
@@ -206,6 +211,7 @@ HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
 HRESULT SPI_API WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
+
     Status st = pcsc.get(hService).lock();
     Result(ReqID, hService, st).send(hWnd, WFS_LOCK_COMPLETE);
 
@@ -266,7 +272,7 @@ HRESULT SPI_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
 */
 HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDetails, DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
-        return WFS_ERR_INVALID_HSERVICE;
+        return WFS_ERR_CONNECTION_LOST;
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
     switch (dwCategory) {
         case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет

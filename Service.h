@@ -1,5 +1,5 @@
-#ifndef PCSC_CENXFS_BRIDGE_Card_H
-#define PCSC_CENXFS_BRIDGE_Card_H
+#ifndef PCSC_CENXFS_BRIDGE_Service_H
+#define PCSC_CENXFS_BRIDGE_Service_H
 
 #pragma once
 
@@ -17,6 +17,7 @@
 #include "EventSupport.h"
 #include "PCSCStatus.h"
 #include "PCSCMediaStatus.h"
+#include "PCSCReaderState.h"
 #include "XFSResult.h"
 
 class ProtocolTypes {
@@ -35,12 +36,31 @@ public:
     }
 };
 
-class Card : public EventNotifier {
+class EventCreator {
+    SCARD_READERSTATE& state;
+    HSERVICE hService;
+public:
+    EventCreator(HSERVICE hService, SCARD_READERSTATE& state) : hService(hService), state(state) {}
+    Result operator()() const {
+        WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
+        // Имя физичеcкого устройства, чье состояние изменилось
+        strcpy(status->lpszPhysicalName, state.szReader);
+        // Рабочая станция, на которой запущен сервис.
+        status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
+        status->dwState = ReaderState(state.dwEventState).translate();
+
+        // Первый и третий параметры не имеют значения.
+        return Result(0, hService, WFS_SUCCESS).data(status);
+    }
+};
+class Service : public EventNotifier {
+    /// Хендл XFS-сервиса, который представляет данный объект
+    HSERVICE hService;
     /// Хендл карты, с которой будет производиться работа.
     SCARDHANDLE hCard;
     /// Протокол, по которому работает карта.
     DWORD dwActiveProtocol;
-    HSERVICE hService;
+    /// Название считывателя, для которого открыт протокол.
     std::string readerName;
 
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
@@ -50,20 +70,31 @@ private:
     @param hContext Ресурсный менеджер подсистемы PC/SC.
     @param readerName
     */
-    Card(HSERVICE hService, SCARDCONTEXT hContext, const char* readerName) : hService(hService), readerName(readerName) {
-        Status st = SCardConnect(hContext, readerName, SCARD_SHARE_SHARED,
+    Service(HSERVICE hService, const std::string& readerName)
+        : hService(hService), hCard(0), dwActiveProtocol(0), readerName(readerName) {}
+public:
+    ~Service() {
+        if (hCard != 0) {
+            close();
+        }
+    }
+
+    Status open(SCARDCONTEXT hContext) {
+        Status st = SCardConnect(hContext, readerName.c_str(), SCARD_SHARE_SHARED,
             // У нас нет предпочитаемого протокола, работаем с тем, что дают
             SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
             // Получаем хендл карты и выбранный протокол.
             &hCard, &dwActiveProtocol
         );
         log("SCardConnect", st);
+        return st;
     }
-public:
-    ~Card() {
+    Status close() {
         // При закрытии соединения ничего не делаем с карточкой, оставляем ее в считывателе.
         Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
         log("SCardDisconnect", st);
+        hCard = 0;
+        return st;
     }
 
     Status lock() {
@@ -80,10 +111,10 @@ public:
         return st;
     }
 
-    inline Result result(REQUESTID ReqID, HRESULT result) {
-        return Result(ReqID, hService, result);
+    void notify(DWORD event, SCARD_READERSTATE& state) const {
+        EventNotifier::notify(event, EventCreator(hService, state));
     }
-    void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) {
+    void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) const {
         Result(ReqID, hService, result).send(hWnd, messageType);
     }
 public:// Функции, вызываемые в WFPGetInfo
@@ -197,4 +228,4 @@ private:
     }
 };
 
-#endif // PCSC_CENXFS_BRIDGE_Card_H
+#endif // PCSC_CENXFS_BRIDGE_Service_H
