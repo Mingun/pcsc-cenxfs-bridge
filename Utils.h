@@ -104,7 +104,7 @@ protected:
     T value;
     template<class OS>
     friend inline OS& operator<<(OS& os, Flags<T, Derived> f) {
-        os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(s.value)) << '(';
+        os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(f.value)) << " (";
         std::vector<CTString> names = f.derived().flagNames();
         bool first = true;
         for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {

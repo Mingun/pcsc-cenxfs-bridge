@@ -178,7 +178,7 @@ HRESULT SPI_API WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg
 */
 HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndReg, HWND hWnd, REQUESTID ReqID) {
     // Отписываемся от событий. Если никого не было удалено, то никто не был зарегистрирован.
-    if (!pcsc.removeSubscriber(hService, hWndReg, dwEventClass) {
+    if (!pcsc.removeSubscriber(hService, hWndReg, dwEventClass)) {
         // Если сервиса нет в PC/SC, то он потерян.
         return WFS_ERR_INVALID_HSERVICE;
     }
