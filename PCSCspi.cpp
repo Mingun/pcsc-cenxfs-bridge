@@ -6,6 +6,10 @@
 #include <XFSIDC.h>
 // Для std::pair
 #include <utility>
+// Для strncpy.
+#include <cstring>
+// Для std::size_t.
+#include <cstddef>
 
 #include "PCSCStatus.h"
 #include "XFSResult.h"
@@ -20,6 +24,12 @@
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
 
+#define DLL_VERSION "Build: Date: " __DATE__ ", time: " __TIME__
+
+template<std::size_t N1, std::size_t N2>
+void safecopy(char (&dst)[N1], const char (&src)[N2]) {
+    strncpy(dst, src, N1 < N2 ? N1 : N2);
+}
 
 /** При загрузке DLL будут вызваны конструкторы всех глобальных объектов и установится
     соединение с подсистемой PC/SC. При выгрузке DLL вызовутся деструкторы глобальных
@@ -29,7 +39,10 @@ PCSC pcsc;
 extern "C" {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-/** Устанавливает сессию с подсистемой PC/SC.
+/** Пытается определить наличие считывателя с указанным в настройках (ключ PCSCReaderName) именем.
+    Если данный ключ не указан, привязывается к первому найденному считывателю. Если в данный
+    момент никаких считывателей в системе не обнаружено, ждет указанное в `dwTimeOut` время, пока
+    его не подключат.
 
 @message WFS_OPEN_COMPLETE
 
@@ -50,6 +63,7 @@ extern "C" {
        0x00112233 означает диапазон версий [0.11; 22.33].
 @param lpSrvcVersion Информация об открытом соединении, специфичная для вида провайдера (карточный ридер)
        (выходной параметр).
+@return Всегда `WFS_SUCCESS`.
 */
 HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName, 
                         HAPP hApp, LPSTR lpszAppID, 
@@ -62,21 +76,23 @@ HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
     // Возвращаем поддерживаемые версии.
     if (lpSPIVersion != NULL) {
         // Версия XFS менеджера, которая будет использоваться. Т.к. мы поддерживаем все версии,
-        // то просто максимальная запрошенная версия (она в младшем слове).
-        lpSPIVersion->wVersion = LOWORD(dwSPIVersionsRequired);
+        // то просто максимальная запрошенная версия (она в старшем слове).
+        lpSPIVersion->wVersion = HIWORD(dwSPIVersionsRequired);
         // Минимальная и максимальная поддерживаемая нами версия
         //TODO: Уточнить минимальную поддерживаемую версию!
         lpSPIVersion->wLowVersion  = MAKE_VERSION(0, 0);
         lpSPIVersion->wHighVersion = MAKE_VERSION(255, 255);
+        safecopy(lpSPIVersion->szDescription, DLL_VERSION);
     }
     if (lpSrvcVersion != NULL) {
         // Версия XFS менеджера, которая будет использоваться. Т.к. мы поддерживаем все версии,
-        // то просто максимальная запрошенная версия (она в младшем слове).
-        lpSrvcVersion->wVersion = LOWORD(dwSrvcVersionsRequired);
+        // то просто максимальная запрошенная версия (она в старшем слове).
+        lpSrvcVersion->wVersion = HIWORD(dwSrvcVersionsRequired);
         // Минимальная и максимальная поддерживаемая нами версия
         //TODO: Уточнить минимальную поддерживаемую версию!
         lpSrvcVersion->wLowVersion  = MAKE_VERSION(0, 0);
         lpSrvcVersion->wHighVersion = MAKE_VERSION(255, 255);
+        safecopy(lpSrvcVersion->szDescription, DLL_VERSION);
     }
 
     // Получаем хендл карты, с которой будем работать.
