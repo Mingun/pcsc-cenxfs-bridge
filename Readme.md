@@ -13,9 +13,12 @@ PC/SC-CEN/XFS-bridge
    поиск PC/SC считывателей.
 3. Вызов со всеми классами событий `WFPRegister(?, SERVICE_EVENTS | USER_EVENTS | SYSTEM_EVENTS | EXECUTE_EVENTS, ...)`
 4. Установка уровня трассировки провайдера `WFMSetTraceLevel(...)`
-5. Получение статуса считывателя `WFPGetInfo(?, WFS_INF_IDC_STATUS, 0, dwTimeOut=300000, ...)`
-5. Получение возможностей считывателя `WFPGetInfo(?, WFS_INF_IDC_CAPABILITIES, 0, dwTimeOut=300000, ...)`
-6. Если считыватель не умеет читать треки, то Kalignite падает с Fatal error.
+5. Получение статуса считывателя `WFPGetInfo(?, WFS_INF_IDC_STATUS, ?, 300000, ...)`
+6. Получение возможностей считывателя `WFPGetInfo(?, WFS_INF_IDC_CAPABILITIES, ?, 300000, ...)`
+7. Если считыватель не умеет читать треки, то Kalignite падает с Fatal error.
+8. Выполнение команды `WFSAsyncExecute(?, WFS_CMD_IDC_READ_RAW_DATA, ?, WFS_INDEFINITE_WAIT, ...)` (ожидание вставки карты с бесконечным таймаутом)
+9. Через некоторое время Kalignite отменяет запрос: `WFPCancelAsyncRequest(...)`
+10. Снова получает статус считывателя: `WFPGetInfo(?, WFS_INF_IDC_STATUS, ?, 300000, ...)`
 
 [1]: http://www.pcscworkgroup.com/
 [2]: http://www.cen.eu/work/areas/ict/ebusiness/pages/ws-xfs.aspx
