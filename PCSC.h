@@ -56,8 +56,8 @@ public:
     bool isValid(HSERVICE hService) {
         return services.find(hService) != services.end();
     }
-    Service& open(HSERVICE hService, const char* name) {
-        Service* service = new Service(hService, name);
+    Service& create(HSERVICE hService) {
+        Service* service = new Service(hService);
         services.insert(std::make_pair(hService, service));
         return *service;
     }
@@ -67,7 +67,7 @@ public:
         assert(service != NULL);
         return *service;
     }
-    void close(HSERVICE hService) {
+    void remove(HSERVICE hService) {
         assert(isValid(hService));
         ServiceMap::iterator it = services.find(hService);
 
@@ -148,7 +148,7 @@ private:
     void notifyChanges(SCARD_READERSTATE& state) const {
         DWORD dwState = state.dwCurrentState;
         for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
-            it->second->notify(WFS_EXECUTE_EVENT, state);
+            it->second->notify(state);
         }
     }
 private:

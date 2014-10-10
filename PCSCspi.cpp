@@ -96,7 +96,8 @@ HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
     }
 
     // Получаем хендл карты, с которой будем работать.
-    pcsc.open(hService, lpszLogicalName).sendResult(hWnd, ReqID, WFS_OPEN_COMPLETE, WFS_SUCCESS);
+    pcsc.create(hService);
+    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_OPEN_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED                The request was canceled by WFSCancelAsyncRequest.
@@ -133,8 +134,8 @@ HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
 HRESULT SPI_API WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
-    pcsc.close(hService);
-    //TODO: Послать окну hWnd сообщение с кодом WFS_CLOSE_COMPLETE и wParam = WFSRESULT;
+    pcsc.remove(hService);
+    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_CLOSE_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED The request was canceled by WFSCancelAsyncRequest.

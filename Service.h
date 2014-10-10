@@ -67,7 +67,7 @@ public:
         // Рабочая станция, на которой запущен сервис.
         status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
         status->dwState = ReaderState(state.dwEventState).translate();
-        return r.data(status);
+        return Result(0, hService, WFS_SUCCESS).data(status);
     }
 };
 class Service : public EventNotifier {
@@ -87,8 +87,8 @@ private:
     @param hContext Ресурсный менеджер подсистемы PC/SC.
     @param readerName
     */
-    Service(HSERVICE hService, const std::string& readerName)
-        : hService(hService), hCard(0), dwActiveProtocol(0), readerName(readerName) {}
+    Service(HSERVICE hService)
+        : hService(hService), hCard(0), dwActiveProtocol(0) {}
 public:
     ~Service() {
         if (hCard != 0) {
