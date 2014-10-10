@@ -183,8 +183,8 @@ public:// Функции, вызываемые в WFPGetInfo
         lpCaps->fwReadTracks = WFS_IDC_NOTSUPP;
         // Какие треки могут быть записаны -- никакие, только чип.
         lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
-        // Виды поддерживаемых картой протоколов.
-        lpCaps->fwChipProtocols = st ? ProtocolTypes(types).translate() : 0;
+        // Виды поддерживаемых устройством протоколов -- все возможные.
+        lpCaps->fwChipProtocols = WFS_IDC_CHIPT0 | WFS_IDC_CHIPT1;
         // Максимальное количество карт, которое устройство может захватить. Всегда 0, т.к. не захватывает.
         lpCaps->usCards = 0;
         // Тип модуля безопасности. Не поддерживается.
@@ -202,8 +202,8 @@ public:// Функции, вызываемые в WFPGetInfo
         // дорожки. Так как чтение/запись треков не поддерживается, то не поддерживаем.
         lpCaps->fwWriteMode = WFS_IDC_NOTSUPP;
         // Возможности считавателя по управлению питанием чипа.
-        //TODO: Возможно, возможности по управлению питанием таки есть.
-        lpCaps->fwChipPower = WFS_IDC_NOTSUPP;
+        //TODO: Получить реальные возможности считывателя. Пока предполагаем, что все возможности есть.
+        lpCaps->fwChipPower = WFS_IDC_CHIPPOWERCOLD | WFS_IDC_CHIPPOWERWARM | WFS_IDC_CHIPPOWEROFF;
         //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
         return std::make_pair(lpCaps, st);
     }
