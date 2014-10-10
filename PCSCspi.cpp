@@ -1,4 +1,7 @@
-
+// Отлючаем ненужную функциональность, из windows.h, который инклудится в XFSIDC.h
+#define WIN32_LEAN_AND_MEAN
+// Предполагаем, что будем пользоваться возможностями Windows XP.
+#define _WIN32_WINNT 0x0501
 // CEN/XFS API -- Наш файл, так как оригинальный предназначен для использования
 // клиентами, а нам надо экспортировать функции, а не импортировать их.
 #include "xfsspi.h"
@@ -336,6 +339,12 @@ HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
 /** Посылает команду для выполнения карточным ридером.
 
 @message WFS_EXECUTE_COMPLETE
+@message WFS_EXEE_IDC_MEDIAINSERTED Генерируется, когда в устройстве появляется карточка.
+@message WFS_SRVE_IDC_MEDIAREMOVED Генерируется, когда из устройства вынимается карточка.
+@message WFS_EXEE_IDC_INVALIDMEDIA
+@message WFS_SRVE_IDC_MEDIADETECTED
+@message WFS_EXEE_IDC_INVALIDTRACKDATA Никогда не генерируется.
+@message WFS_USRE_IDC_RETAINBINTHRESHOLD Никогда не генерируется.
 
 @param hService Хендл сервис-провайдера, который должен выполнить команду.
 @param dwCommand Вид выполняемой команды.
@@ -366,11 +375,11 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
         case WFS_CMD_IDC_EJECT_CARD: {// Входных параметров нет.
             return WFS_ERR_UNSUPP_COMMAND;
         }
-        // Команда на захват карты считывателем. Аналогично предудущей команде.
+        // Команда на захват карты считывателем. Аналогично предыдущей команде.
         case WFS_CMD_IDC_RETAIN_CARD: {// Входных параметров нет.
             return WFS_ERR_UNSUPP_COMMAND;
         }
-        // Команда на сброс счетчика захваченных карт. Так как мы их не звахватываем, то не поддерживаем.
+        // Команда на сброс счетчика захваченных карт. Так как мы их не захватываем, то не поддерживаем.
         case WFS_CMD_IDC_RESET_COUNT: {// Входных параметров нет.
             return WFS_ERR_UNSUPP_COMMAND;
         }
