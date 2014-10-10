@@ -57,7 +57,6 @@ public:
         return services.find(hService) != services.end();
     }
     Service& open(HSERVICE hService, const char* name) {
-        // Конструктор устанавливает соединение с подсистемой PC/SC.
         Service* service = new Service(hService, name);
         services.insert(std::make_pair(hService, service));
         return *service;
@@ -116,8 +115,15 @@ private:
         readers[0].szReader = "\\\\?PnP?\\Notification";
         readers[0].dwCurrentState = SCARD_STATE_UNAWARE;
 
-        for (std::vector<char>::const_iterator it = readerNames.begin(); it != readerNames.end(); ++it) {
-            //it
+        std::size_t i = 0;
+        std::vector<char>::const_iterator begin = readerNames.begin();
+        for (std::vector<char>::const_iterator it = begin; it != readerNames.end() && i < readersCount;) {
+            if (*it == '\0') {
+                readers[1 + i++].szReader = static_cast<LPCSTR>(&*begin);
+                begin = ++it;
+                continue;
+            }
+            ++it;
         }
         waitChanges(readers);
     }

@@ -105,11 +105,13 @@ public:// События доступности карты в считывате
     /// Событие генерируется, когда считыватель обнаруживает, что в него вставлена карта.
     inline Result& cardInserted() {
         assert(pResult != NULL);
+        assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwEventID = WFS_EXEE_IDC_MEDIAINSERTED;
     }
     /// Событие генерируется, когда считыватель обнаруживает, что из него вытащена карта.
     inline Result& cardRemoved() {
         assert(pResult != NULL);
+        assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwEventID = WFS_SRVE_IDC_MEDIAREMOVED;
     }
     /// Генерируется, если карта была обнаружена в считывателе во время команды
