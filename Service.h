@@ -36,26 +36,31 @@ public:
     }
 };
 
-class EventCreator {
-    SCARD_READERSTATE& state;
+/// Функтор, создающий результат уведомления о вставке карты каждому заинтересованному слушателю.
+class CardInserted {
     HSERVICE hService;
 public:
-    EventCreator(HSERVICE hService, SCARD_READERSTATE& state) : hService(hService), state(state) {}
+    CardInserted(HSERVICE hService) : hService(hService) {}
     Result operator()() const {
-        // Первый и третий параметры не имеют значения.
-        Result r = Result(0, hService, WFS_SUCCESS);
-
-        // Если вставлена карта, сразу же ее открываем.
-        if (state.dwEventState & SCARD_STATE_PRESENT) {
-            //service.open(state.szReader);
-            return r.cardInserted();
-        }
-        // Если карта вытащена, закрываем ее.
-        if (state.dwEventState & SCARD_STATE_EMPTY) {
-            //service.close();
-            return r.cardRemoved();
-        }
-
+        return Result(0, hService, WFS_SUCCESS).cardInserted();
+    }
+};
+/// Функтор, создающий результат уведомления о удалении карты каждому заинтересованному слушателю.
+class CardRemoved {
+    HSERVICE hService;
+public:
+    CardRemoved(HSERVICE hService) : hService(hService) {}
+    Result operator()() const {
+        return Result(0, hService, WFS_SUCCESS).cardRemoved();
+    }
+};
+/// Функтор, создающий результат уведомления о появлении нового устройства каждому заинтересованному слушателю.
+class DeviceDetected {
+    HSERVICE hService;
+    SCARD_READERSTATE& state;
+public:
+    DeviceDetected(HSERVICE hService, SCARD_READERSTATE& state) : hService(hService), state(state) {}
+    Result operator()() const {
         WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
         // Имя физичеcкого устройства, чье состояние изменилось
         strcpy(status->lpszPhysicalName, state.szReader);
@@ -124,9 +129,17 @@ public:
 
         return st;
     }
-
-    void notify(DWORD event, SCARD_READERSTATE& state) const {
-        EventNotifier::notify(event, EventCreator(hService, state));
+    /// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
+    void notify(SCARD_READERSTATE& state) const {
+        /*if (state.dwEventState & SCARD_STATE_) {
+            EventNotifier::notify(WFS_SYSTEM_EVENT, DeviceDetected(hService, state));
+        }*/
+        if (state.dwEventState & SCARD_STATE_EMPTY) {
+            EventNotifier::notify(WFS_SERVICE_EVENT, CardRemoved(hService));
+        }
+        if (state.dwEventState & SCARD_STATE_PRESENT) {
+            EventNotifier::notify(WFS_EXECUTE_EVENT, CardInserted(hService));
+        }
     }
     void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) const {
         Result(ReqID, hService, result).send(hWnd, messageType);
