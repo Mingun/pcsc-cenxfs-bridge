@@ -107,12 +107,14 @@ public:// События доступности карты в считывате
         assert(pResult != NULL);
         assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwEventID = WFS_EXEE_IDC_MEDIAINSERTED;
+        return *this;
     }
     /// Событие генерируется, когда считыватель обнаруживает, что из него вытащена карта.
     inline Result& cardRemoved() {
         assert(pResult != NULL);
         assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwEventID = WFS_SRVE_IDC_MEDIAREMOVED;
+        return *this;
     }
     /// Генерируется, если карта была обнаружена в считывателе во время команды
     /// сброса (WFS_CMD_IDC_RESET). Так как карта обнаружена, считается, что она
@@ -123,6 +125,7 @@ public:// События доступности карты в считывате
         assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwEventID = WFS_SRVE_IDC_MEDIADETECTED;
         pResult->lpBuffer = xfsAlloc<DWORD>(WFS_IDC_CARDREADPOSITION);
+        return *this;
     }
     void send(HWND hWnd, DWORD messageType) {
         assert(pResult != NULL);

@@ -9,6 +9,9 @@
 #include <map>
 #include <cassert>
 
+#include <boost/thread/thread.hpp>
+#include <boost/shared_ptr.hpp>
+
 // PC/CS API
 #include <winscard.h>
 // Определения для ридеров карт (Identification card unit (IDC))
@@ -35,12 +38,17 @@ public:
     SCARDCONTEXT hContext;
     /// Список карт, открытых для взаимодействия с системой XFS.
     ServiceMap services;
+    /// Поток для выполнения ожидания изменения в оборудовании.
+    boost::shared_ptr<boost::thread> waitThread;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
     PCSC() {
         // Создаем контекст.
         Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
         log("SCardEstablishContext", st);
+        // Запускаем поток ожидания изменений от системы PC/SC -- добавление и удаление
+        // считывателей и карточек.
+        waitThread.reset(new boost::thread(&PCSC::run, this));
     }
     /// Закрывает соединение к менеджеру подсистемы PC/SC.
     ~PCSC() {
@@ -99,7 +107,16 @@ public:// Подписка на события и генерация событ�
         return true;
     }
 private:
-    void prepareReadersState() {
+    /// Блокирует выполнение, пока поток не будет остановлен. Необходимо
+    /// запускать из своего потока.
+    void run() {
+        WFMOutputTraceData("Dispatch thread runned");
+        do {
+            getReadersAndWaitChanges();
+        } while (true);
+        WFMOutputTraceData("Dispatch thread stopped");
+    }
+    void getReadersAndWaitChanges() {
         DWORD readersCount;
         // Определяем доступные считыватели: сначало количество, затем сами считыватели.
         Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
@@ -115,6 +132,7 @@ private:
         readers[0].szReader = "\\\\?PnP?\\Notification";
         readers[0].dwCurrentState = SCARD_STATE_UNAWARE;
 
+        // Заполняем структуры для ожидания событий от найденных считывателей.
         std::size_t i = 0;
         std::vector<char>::const_iterator begin = readerNames.begin();
         for (std::vector<char>::const_iterator it = begin; it != readerNames.end() && i < readersCount;) {
@@ -125,28 +143,41 @@ private:
             }
             ++it;
         }
-        waitChanges(readers);
+        // Ожидаем событий от считывателей. Если их количество обновилось,
+        // то прекращаем ожидание. Повторный вход в данную процедуру случится
+        // на следующем витке цикла в run.
+        while (!waitChanges(readers));
     }
     /** Данная блокирует выполнение до тех пор, пока не получит событие об изменении состояния
         физических устройств, поэтому она должна вызываться в отдельном потоке. После наступления
         события она отсылает соответствующие события всем заинтересованным слушателям подсистемы XFS.
+    @param readers Отслеживаемые считыватели. Первый элемент отслеживает изменения устройств.
+    @return `true`, если произошли изменения в количестве считывателей, `false` иначе.
     */
-    void waitChanges(std::vector<SCARD_READERSTATE>& readers) {
+    bool waitChanges(std::vector<SCARD_READERSTATE>& readers) {
         // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
         // Ждем его до бесконечности.
         Status st = SCardGetStatusChange(hContext, INFINITE, &readers[0], (DWORD)readers.size());
         log("SCardGetStatusChange", st);
+        bool readersChanged = false;
+        bool first = true;
         for (std::vector<SCARD_READERSTATE>::iterator it = readers.begin(); it != readers.end(); ++it) {
             // Cообщаем PC/SC, что мы знаем текущее состояние
             it->dwCurrentState = it->dwEventState;
             // Если что-то изменилось, уведомляем об этом всех заинтересованных.
             if (it->dwEventState & SCARD_STATE_CHANGED) {
+                // Первый элемент в списке -- объект, через который приходят
+                // уведомления об изменениях самих устройств.
+                if (first) {
+                    readersChanged = true;
+                }
                 notifyChanges(*it);
             }
+            first = false;
         }
+        return readersChanged;
     }
     void notifyChanges(SCARD_READERSTATE& state) const {
-        DWORD dwState = state.dwCurrentState;
         for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
             it->second->notify(state);
         }
