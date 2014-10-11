@@ -53,7 +53,7 @@ public:
     }
 public:// Функции, вызываемые в WFPGetInfo
     std::pair<WFSIDCSTATUS*, Status> getStatus();
-    std::pair<WFSIDCCAPS*, Status> getCaps();
+    std::pair<WFSIDCCAPS*, Status> getCaps() const;
 public:// Функции, вызываемые в WFPExecute
     /** Начинает операцию ожидания вставки карточки в считыватель. Как только карточка
         будет вставлена в считыватель, генерирует сообщение `WFS_EXEE_IDC_MEDIAINSERTED`,
@@ -75,8 +75,15 @@ public:// Функции, вызываемые в WFPExecute
         `WFS_EXECUTE_COMPLETE`.
     */
     void asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID);
-    std::pair<WFSIDCCARDDATA*, Status> read();
-    std::pair<WFSIDCCHIPIO*, Status> transmit(WFSIDCCHIPIO* input);
+    /** Отменяет ранее начатую через asyncRead операцию асинхронного чтения.
+    @return
+        `true`, если операция была отменена и `false`, если для данного
+        трекингового номера нет незавершенного асинхронного запроса.
+    */
+    bool cancel(REQUESTID ReqID);
+
+    std::pair<WFSIDCCARDDATA*, Status> read() const;
+    std::pair<WFSIDCCHIPIO*, Status> transmit(WFSIDCCHIPIO* input) const;
 private:
     void log(std::string operation, Status st) const;
 };

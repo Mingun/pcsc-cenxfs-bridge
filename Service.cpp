@@ -120,7 +120,7 @@ std::pair<WFSIDCSTATUS*, Status> Service::getStatus() {
     //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
     return std::make_pair(lpStatus, st);
 }
-std::pair<WFSIDCCAPS*, Status> Service::getCaps() {
+std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
     WFSIDCCAPS* lpCaps = xfsAlloc<WFSIDCCAPS>();
 
     // Получаем поддерживаемые картой протоколы.
@@ -167,7 +167,10 @@ std::pair<WFSIDCCAPS*, Status> Service::getCaps() {
 void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     
 }
-std::pair<WFSIDCCARDDATA*, Status> Service::read() {
+bool Service::cancel(REQUESTID ReqID) {
+    return false;//TODO: Реализовать отмену асинхронной операции
+}
+std::pair<WFSIDCCARDDATA*, Status> Service::read() const {
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
     data->wDataSource = WFS_IDC_CHIP;
@@ -178,7 +181,7 @@ std::pair<WFSIDCCARDDATA*, Status> Service::read() {
     Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
     return std::make_pair(data, st);
 }
-std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) {
+std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) const {
     assert(input != NULL);
 
     WFSIDCCHIPIO* result = xfsAlloc<WFSIDCCHIPIO>();
