@@ -14,6 +14,8 @@
 // Для std::size_t.
 #include <cstddef>
 
+#include <vector>
+
 #include "PCSCStatus.h"
 #include "XFSResult.h"
 #include "PCSC.h"
@@ -23,6 +25,8 @@
 #pragma comment(lib, "winscard.lib")
 // Линкуемся с библиотекой реализации XFS
 #pragma comment(lib, "msxfs.lib")
+// Линкуемся с библиотекой поддержки конфигураионных функций XFS
+#pragma comment(lib, "xfs_conf.lib")
 // Линкуемся с библитекой для использования оконных функций (PostMessage)
 #pragma comment(lib, "user32.lib")
 
@@ -35,6 +39,28 @@ void safecopy(char (&dst)[N1], const char (&src)[N2]) {
     strncpy(dst, src, N1 < N2 ? N1 : N2);
 }
 
+class RegKey {
+    HKEY hKey;
+public:
+    inline RegKey(HKEY root, const char* name) {
+        WFMOpenKey(root, (LPSTR)name, &hKey);
+    }
+    inline ~RegKey() { WFMCloseKey(hKey); }
+
+    inline RegKey child(const char* name) {
+        return RegKey(hKey, name);
+    }
+    inline std::string value(const char* name) {
+        DWORD dwSize;
+        WFMQueryValue(hKey, (LPSTR)name, NULL, &dwSize);
+        // Используем вектор, т.к. он гарантирует непрерывность памяти под данные,
+        // чего нельзя сказать в случае со string.
+        std::vector<char> value;
+        value.reserve(dwSize);
+        WFMQueryValue(hKey, (LPSTR)name, &value[0], &dwSize);
+        return std::string(value.begin(), value.end());
+    }
+};
 /** При загрузке DLL будут вызваны конструкторы всех глобальных объектов и установится
     соединение с подсистемой PC/SC. При выгрузке DLL вызовутся деструкторы глобальных
     объектов и соединение автоматически закроется.
