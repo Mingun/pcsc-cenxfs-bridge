@@ -17,6 +17,7 @@
 #include "PCSCStatus.h"
 #include "XFSResult.h"
 #include "PCSC.h"
+#include "Service.h"
 
 // Линкуемся с библиотекой реализации стандарта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")
