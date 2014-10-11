@@ -46,7 +46,7 @@ public:
     inline bool isValid(HSERVICE hService) {
         return services.find(hService) != services.end();
     }
-    Service& create(HSERVICE hService);
+    Service& create(HSERVICE hService, const std::string& readerName);
     Service& get(HSERVICE hService);
     void remove(HSERVICE hService);
 public:// Подписка на события и генерация событий

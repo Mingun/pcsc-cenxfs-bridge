@@ -26,8 +26,8 @@ PCSC::~PCSC() {
     log("SCardReleaseContext", st);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service& PCSC::create(HSERVICE hService) {
-    Service* service = new Service(hService);
+Service& PCSC::create(HSERVICE hService, const std::string& readerName) {
+    Service* service = new Service(hService, readerName);
     services.insert(std::make_pair(hService, service));
     return *service;
 }

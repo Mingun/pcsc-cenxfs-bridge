@@ -14,6 +14,7 @@
 #include "PCSCStatus.h"
 #include "XFSResult.h"
 
+class ServiceImpl;
 class Service : public EventNotifier {
     /// Хендл XFS-сервиса, который представляет данный объект
     HSERVICE hService;
@@ -24,6 +25,8 @@ class Service : public EventNotifier {
     /// Название считывателя, для которого открыт протокол.
     std::string readerName;
 
+    /// Реализация сервиса, ведающая рассылкой асинхронных уведомлений.
+    ServiceImpl* impl;
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class PCSC;
 private:
@@ -31,14 +34,9 @@ private:
     @param hContext Ресурсный менеджер подсистемы PC/SC.
     @param readerName
     */
-    Service(HSERVICE hService)
-        : hService(hService), hCard(0), dwActiveProtocol(0) {}
+    Service(HSERVICE hService, const std::string& readerName);
 public:
-    ~Service() {
-        if (hCard != 0) {
-            close();
-        }
-    }
+    ~Service();
     inline HSERVICE handle() const { return hService; }
 
     Status open(SCARDCONTEXT hContext);

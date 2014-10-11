@@ -99,8 +99,8 @@ HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
         safecopy(lpSrvcVersion->szDescription, DLL_VERSION);
     }
 
-    // Получаем хендл карты, с которой будем работать.
-    pcsc.create(hService);
+    //TODO: получить имя считывателя из реестра!
+    pcsc.create(hService, "DummyReader");
     Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_OPEN_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
@@ -401,6 +401,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             // Битовая маска с данными, которые должны быть прочитаны.
             WORD lpwReadData = *((WORD*)lpCmdData);
             if (lpwReadData & WFS_IDC_CHIP) {
+                pcsc.get(hService).asyncRead(dwTimeOut, hWnd, ReqID);
                 std::pair<WFSIDCCARDDATA*, Status> result = pcsc.get(hService).read();
                 Result(ReqID, hService, result.second).data(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
                 return WFS_SUCCESS;
@@ -485,12 +486,15 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
 HRESULT SPI_API WFPCancelAsyncRequest(HSERVICE hService, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
+    if (!pcsc.get(hService).cancel(ReqID)) {
+        return WFS_ERR_INVALID_REQ_ID;
+    }
     // Возможные коды завершения функции:
-    // WFS_ERR_CONNECTION_LOST //The connection to the service is lost.
-    // WFS_ERR_INTERNAL_ERROR //An internal inconsistency or other unexpected error occurred in the XFS subsystem.
-    // WFS_ERR_INVALID_HSERVICE //The hService parameter is not a valid service handle.
-    // WFS_ERR_INVALID_REQ_ID //The RequestID parameter does not correspond to an outstanding request on the service.
-    return WFS_ERR_UNSUPP_COMMAND;
+    // WFS_ERR_CONNECTION_LOST  The connection to the service is lost.
+    // WFS_ERR_INTERNAL_ERROR   An internal inconsistency or other unexpected error occurred in the XFS subsystem.
+    // WFS_ERR_INVALID_HSERVICE The hService parameter is not a valid service handle.
+    // WFS_ERR_INVALID_REQ_ID   The ReqID parameter does not correspond to an outstanding request on the service.
+    return WFS_SUCCESS;
 }
 HRESULT SPI_API WFPSetTraceLevel(HSERVICE hService, DWORD dwTraceLevel) {
     if (!pcsc.isValid(hService))

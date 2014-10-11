@@ -1,11 +1,20 @@
+// Без этого компиляция падает с ошибкой
+// WinSock.h has already been included
+// при компиляции исходников boost::asio.
+#define WIN32_LEAN_AND_MEAN
+
 #include "Service.h"
 
 #include "Utils.h"
 #include "PCSCMediaStatus.h"
 #include "PCSCReaderState.h"
+#include "ServiceImpl.h"
 
+#include <string>
 #include <sstream>
 #include <cassert>
+// Для работы с текущим временем, для получения времени дедлайна.
+#include <boost/chrono/chrono.hpp>
 
 /// Функтор, создающий результат уведомления о вставке карты каждому заинтересованному слушателю.
 class CardInserted {
@@ -42,6 +51,40 @@ public:
     }
 };
 
+/*
+class ProtocolTypes {
+    DWORD value;
+public:
+    inline ProtocolTypes(DWORD flags) : value(flags) {}
+    inline WORD translate() {
+        WORD result = 0;
+        if (value & (1 << 0)) {// Нулевой бит -- протокол T0
+            result |= WFS_IDC_CHIPT0;
+        }
+        if (value & (1 << 1)) {// Первый бит -- протокол T1
+            result |= WFS_IDC_CHIPT1;
+        }
+        return result;
+    }
+};*/
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Service::Service(HSERVICE hService, const std::string& readerName)
+    : hService(hService)
+    , hCard(0)
+    , dwActiveProtocol(0)
+    , readerName(readerName)
+    , impl(NULL)
+    //, impl(new ServiceImpl(ioService, *this))
+    {}
+Service::~Service() {
+    if (hCard != 0) {
+        close();
+    }
+    delete impl;
+    impl = NULL;
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Status Service::open(SCARDCONTEXT hContext) {
     assert(hCard == 0 && "Must open only one card at one service");
     Status st = SCardConnect(hContext, readerName.c_str(), SCARD_SHARE_SHARED,
@@ -165,10 +208,11 @@ std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
-    
+    bc::steady_clock::time_point now = bc::steady_clock::now();
+    impl->addTask(Task(now + bc::milliseconds(dwTimeOut), hWnd, ReqID, *this));
 }
 bool Service::cancel(REQUESTID ReqID) {
-    return false;//TODO: Реализовать отмену асинхронной операции
+    return impl->cancelTask(ReqID);
 }
 std::pair<WFSIDCCARDDATA*, Status> Service::read() const {
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
