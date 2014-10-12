@@ -45,6 +45,8 @@ public:
     /// Должен быть уникален для каждой задачи.
     REQUESTID ReqID;
 public:
+    typedef boost::shared_ptr<Task> Ptr;
+public:
     Task(bc::steady_clock::time_point deadline, HSERVICE hService, HWND hWnd, REQUESTID ReqID)
         : deadline(deadline), hService(hService), hWnd(hWnd), ReqID(ReqID) {}
     inline bool operator<(const Task& other) const {
@@ -62,7 +64,7 @@ public:
     @param state
         Данные изменившегося состояния.
     */
-    virtual bool match(const SCARD_READERSTATE& state) const {return false;}//= 0;
+    virtual bool match(const SCARD_READERSTATE& state) const = 0;
     inline void notify(HRESULT result, DWORD messageType) const {
         Result(ReqID, hService, result).send(hWnd, messageType);
     }
@@ -85,7 +87,7 @@ public:
     /// Тип для отображения сервисов XFS на карты PC/SC.
     typedef std::map<HSERVICE, Service*> ServiceMap;
     typedef mi::multi_index_container<
-        Task,
+        Task::Ptr,
         mi::indexed_by<
             // Сортировка по CardWaitTask::operator< -- по времени дедлайна, для выбора
             // задач, чей таймаут подошел.
@@ -121,7 +123,7 @@ public:
     Service& create(HSERVICE hService, const std::string& readerName);
     Service& get(HSERVICE hService);
     void remove(HSERVICE hService);
-    void addTask(const Task& task);
+    void addTask(const Task::Ptr& task);
     /** Отменяет задачу с указанный трекинговым номером, возвращает `true`, если задача с таким
         номером имелась в списке, иначе `false`.
     @param hService
@@ -157,7 +159,7 @@ private:
 private:// Управление задачами
     /// Добавляет задачу в очередь, возвращает `true`, если задача первая в очереди
     /// и дедлайн необходимо скорректировать, чтобы не пропустить дедлайн данной задачи.
-    bool addTaskImpl(const Task& task);
+    bool addTaskImpl(const Task::Ptr& task);
     bool cancelTaskImpl(HSERVICE hService, REQUESTID ReqID);
     /** Удаляет из списка все задачи, чье время дедлайна раньше или равно указанному
         и сигнализирует зарегистрированным в задаче слушателем о наступлении таймаута.

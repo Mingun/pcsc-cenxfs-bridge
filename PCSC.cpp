@@ -114,7 +114,7 @@ bool PCSC::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     // Если имеются задачи, то ожидаем до их таймаута, в противном случае до бесконечности.
     if (!tasks.empty()) {
         // Время до ближайшего таймаута.
-        bc::steady_clock::duration dur = tasks.begin()->deadline - bc::steady_clock::now();
+        bc::steady_clock::duration dur = (*tasks.begin())->deadline - bc::steady_clock::now();
         // Преобразуем его в миллисекунды
         dwTimeout = (DWORD)bc::duration_cast<bc::milliseconds>(dur).count();
     }
@@ -153,7 +153,7 @@ void PCSC::notifyChanges(SCARD_READERSTATE& state) {
     }
     for (TaskList::iterator it = tasks.begin(); it != tasks.end();) {
         // Если задача ожидала этого события, то удаляем ее из списка.
-        if (it->match(state)) {
+        if ((*it)->match(state)) {
             it = tasks.erase(it);
             continue;
         }
@@ -161,7 +161,7 @@ void PCSC::notifyChanges(SCARD_READERSTATE& state) {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void PCSC::addTask(const Task& task) {
+void PCSC::addTask(const Task::Ptr& task) {
     if (addTaskImpl(task)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
@@ -179,7 +179,7 @@ bool PCSC::cancelTask(HSERVICE hService, REQUESTID ReqID) {
     }
     return false;
 }
-bool PCSC::addTaskImpl(const Task& task) {
+bool PCSC::addTaskImpl(const Task::Ptr& task) {
     std::pair<TaskList::iterator, bool> r = tasks.insert(task);
     // Вставляться должны уникальные по ReqID элементы.
     assert(r.second == false);
@@ -198,7 +198,7 @@ bool PCSC::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
         return false;
     }
     // Сигнализируем зарегистрированным слушателем о том, что задача отменена.
-    it->cancel();
+    (*it)->cancel();
     byID.erase(it);
     return true;
 }
@@ -212,11 +212,11 @@ void PCSC::processTimeouts(bc::steady_clock::time_point now) {
         // Извлекаем все задачи, чей таймаут наступил. Так как все задачи упорядочены по
         // времени таймаута (чем раньше таймаут, тем ближе к голове очереди), то первая
         // задача, таймаут которой еще не наступил, прерывает цепочку таймаутов.
-        if (it->deadline > now) {
+        if ((*it)->deadline > now) {
             break;
         }
         // Сигнализируем зарегистрированным слушателем о том, что произошел таймаут.
-        it->timeout();
+        (*it)->timeout();
     }
     // Удаляем завершенные таймаутом задачи.
     byDeadline.erase(begin, it);

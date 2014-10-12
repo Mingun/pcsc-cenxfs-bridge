@@ -218,7 +218,7 @@ std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
 void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     namespace bc = boost::chrono;
     bc::steady_clock::time_point now = bc::steady_clock::now();
-    pcsc.addTask(CardReadTask(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID));
+    pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID)));
 }
 std::pair<WFSIDCCARDDATA*, Status> Service::read() const {
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
