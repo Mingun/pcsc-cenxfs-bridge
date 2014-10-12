@@ -145,9 +145,19 @@ bool PCSC::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     }
     return readersChanged;
 }
-void PCSC::notifyChanges(SCARD_READERSTATE& state) const {
+void PCSC::notifyChanges(SCARD_READERSTATE& state) {
+    // Сначала уведомляем подписанных слушателей об изменениях, и только затем
+    // пытаемся завершить задачи.
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
         it->second->notify(state);
+    }
+    for (TaskList::iterator it = tasks.begin(); it != tasks.end();) {
+        // Если задача ожидала этого события, то удаляем ее из списка.
+        if (it->match(state)) {
+            it = tasks.erase(it);
+            continue;
+        }
+        ++it;
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

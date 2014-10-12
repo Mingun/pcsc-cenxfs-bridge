@@ -54,12 +54,24 @@ public:
         return hService == other.hService && ReqID == other.ReqID;
     }
 public:
-    /// Вызывается, если запрос был отменен вызовом WFPCancelAsyncRequest.
-    void cancel() const {
-        Result(ReqID, hService, WFS_ERR_CANCELED).send(hWnd, WFS_EXECUTE_COMPLETE);
+    /** Проверяет, является ли указанное событие тем, что ожидает данная задача.
+        Если функция вернет `true`, та данная задача будет считаться завершенной
+        и будет исключена ис списка зарегистрированных задач. Если зачате требуется
+        выполнить какие-то действия в случае успешного завершения, это надо сделать
+        здесь.
+    @param state
+        Данные изменившегося состояния.
+    */
+    virtual bool match(const SCARD_READERSTATE& state) const {return false;}//= 0;
+    inline void notify(HRESULT result, DWORD messageType) const {
+        Result(ReqID, hService, result).send(hWnd, messageType);
     }
-    void timeout() const {
-        Result(ReqID, hService, WFS_ERR_TIMEOUT).send(hWnd, WFS_EXECUTE_COMPLETE);
+    /// Вызывается, если запрос был отменен вызовом WFPCancelAsyncRequest.
+    inline void cancel() const {
+        notify(WFS_ERR_CANCELED, WFS_EXECUTE_COMPLETE);
+    }
+    inline void timeout() const {
+        notify(WFS_ERR_TIMEOUT, WFS_EXECUTE_COMPLETE);
     }
 };
 class Service;
@@ -141,7 +153,7 @@ private:
     @return `true`, если произошли изменения в количестве считывателей, `false` иначе.
     */
     bool waitChanges(std::vector<SCARD_READERSTATE>& readers);
-    void notifyChanges(SCARD_READERSTATE& state) const;
+    void notifyChanges(SCARD_READERSTATE& state);
 private:// Управление задачами
     /// Добавляет задачу в очередь, возвращает `true`, если задача первая в очереди
     /// и дедлайн необходимо скорректировать, чтобы не пропустить дедлайн данной задачи.

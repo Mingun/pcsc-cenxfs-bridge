@@ -523,6 +523,7 @@ HRESULT SPI_API WFPCancelAsyncRequest(HSERVICE hService, REQUESTID ReqID) {
 HRESULT SPI_API WFPSetTraceLevel(HSERVICE hService, DWORD dwTraceLevel) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
+    //pcsc.get(hService).setTraceLevel(dwTraceLevel);
     // Возможные коды завершения функции:
     // WFS_ERR_CONNECTION_LOST    The connection to the service is lost.
     // WFS_ERR_INTERNAL_ERROR     An internal inconsistency or other unexpected error occurred in the XFS subsystem.

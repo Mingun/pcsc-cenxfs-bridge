@@ -5,14 +5,13 @@
 
 #include <string>
 
-// CEN/XFS API -- Для WFMOutputTraceData
-#include <xfsadmin.h>
+// CEN/XFS API
+#include <xfsapi.h>
 // PC/CS API
 #include <winscard.h>
 
 #include "EventSupport.h"
 #include "PCSCStatus.h"
-#include "XFSResult.h"
 
 class PCSC;
 class Service : public EventNotifier {
@@ -25,7 +24,6 @@ class Service : public EventNotifier {
     DWORD dwActiveProtocol;
     /// Название считывателя, для которого открыт протокол.
     std::string readerName;
-
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class PCSC;
 private:
@@ -48,9 +46,6 @@ public:
         Информация о текущем состоянии изменившегося считывателя.
     */
     void notify(SCARD_READERSTATE& state) const;
-    inline void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) const {
-        Result(ReqID, hService, result).send(hWnd, messageType);
-    }
 public:// Функции, вызываемые в WFPGetInfo
     std::pair<WFSIDCSTATUS*, Status> getStatus();
     std::pair<WFSIDCCAPS*, Status> getCaps() const;

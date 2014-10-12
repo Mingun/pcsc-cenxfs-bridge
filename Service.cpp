@@ -11,6 +11,9 @@
 // Для работы с текущим временем, для получения времени дедлайна.
 #include <boost/chrono/chrono.hpp>
 
+// CEN/XFS API -- Для WFMOutputTraceData
+#include <xfsadmin.h>
+
 /// Функтор, создающий результат уведомления о вставке карты каждому заинтересованному слушателю.
 class CardInserted {
     HSERVICE hService;
@@ -46,6 +49,19 @@ public:
     }
 };
 
+class CardReadTask : public Task {
+public:
+    CardReadTask(bc::steady_clock::time_point deadline, HSERVICE hService, HWND hWnd, REQUESTID ReqID)
+        : Task(deadline, hService, hWnd, ReqID) {}
+    virtual bool match(const SCARD_READERSTATE& state) const {
+        if (state.dwEventState & SCARD_STATE_PRESENT) {
+            // Уведомляем поставщика задачи, что она выполнена.
+            notify(WFS_SUCCESS, WFS_EXECUTE_COMPLETE);
+            return true;
+        }
+        return false;
+    }
+};
 /*
 class ProtocolTypes {
     DWORD value;
@@ -202,7 +218,7 @@ std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
 void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     namespace bc = boost::chrono;
     bc::steady_clock::time_point now = bc::steady_clock::now();
-    pcsc.addTask(Task(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID));
+    pcsc.addTask(CardReadTask(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID));
 }
 std::pair<WFSIDCCARDDATA*, Status> Service::read() const {
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
