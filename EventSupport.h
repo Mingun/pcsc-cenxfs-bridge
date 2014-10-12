@@ -72,7 +72,8 @@ public:
         // Если указанный элемент уже существовал в карте, то он не будет заменен,
         // нам это и не нужно. Вместо этого нужно обновить существующий элемент.
         if (r.second) {
-            r.first->add(event);
+            // Преобразование безопасно, т.к. ключ для std::set не меняется.
+            const_cast<EventSubscriber&>(*r.first).add(event);
         }
     }
     void remove(HWND hWnd, DWORD event) {
@@ -82,7 +83,7 @@ public:
             for (SubscriberList::iterator it = subscribers.begin(); it != subscribers.end(); ++it) {
                 // Удаляем класс событий. Если это был последний интересуемый класс событий,
                 // то удаляем и подписчика. Если указан 0, то отписка идет от всех классов событий.
-                if (event == 0 || it->remove(event)) {
+                if (event == 0 || const_cast<EventSubscriber&>(*it).remove(event)) {
                     // Для C++11 можно было бы использовать it = subscribers.erase(it);
                     // Но хочется остаться в рамках C++03
                     forRemove.push_back(it->hWnd);
@@ -97,7 +98,7 @@ public:
             if (it != subscribers.end()) {
                 // Удаляем класс событий. Если это был последний интересуемый класс событий,
                 // то удаляем и подписчика. Если указан 0, то отписка идет от всех классов событий.
-                if (event == 0 || it->remove(event)) {
+                if (event == 0 || const_cast<EventSubscriber&>(*it).remove(event)) {
                     subscribers.erase(it);
                 }
             }
