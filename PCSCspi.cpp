@@ -428,8 +428,6 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             WORD lpwReadData = *((WORD*)lpCmdData);
             if (lpwReadData & WFS_IDC_CHIP) {
                 pcsc.get(hService).asyncRead(dwTimeOut, hWnd, ReqID);
-                std::pair<WFSIDCCARDDATA*, Status> result = pcsc.get(hService).read();
-                Result(ReqID, hService, result.second).data(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
                 return WFS_SUCCESS;
             }
             return WFS_ERR_UNSUPP_COMMAND;

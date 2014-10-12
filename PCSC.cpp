@@ -7,7 +7,7 @@
 #include "PCSCReaderState.h"
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
-PCSC::PCSC() {
+PCSC::PCSC() : work(ioService) {
     // Создаем контекст.
     Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
     log("SCardEstablishContext", st);
@@ -78,11 +78,15 @@ void PCSC::getReadersAndWaitChanges() {
     // Определяем доступные считыватели: сначало количество, затем сами считыватели.
     Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
     log("SCardListReaders(get readers count)", st);
-
+    // Получаем имена доступных считывателей. Все имена расположены в одной строке,
+    // разделены символом '\0' в в конце списка также символ '\0' (т.о. в конце массива
+    // идеет подряд два '\0').
     std::vector<char> readerNames(readersCount);
     st = SCardListReaders(hContext, NULL, &readerNames[0], &readersCount);
     log("SCardListReaders(get readers)", st);
 
+    // Готовимся к ожиданию событий от всех обнаруженных считывателей и
+    // изменению их количества.
     std::vector<SCARD_READERSTATE> readers(1+readersCount);
     // Считыватель со специальным именем, означающем, что необходимо мониторить
     // появление/пропажу считывателей.
