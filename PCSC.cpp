@@ -27,7 +27,7 @@ PCSC::~PCSC() {
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Service& PCSC::create(HSERVICE hService, const std::string& readerName) {
-    Service* service = new Service(hService, readerName);
+    Service* service = new Service(hService, readerName, ioService);
     services.insert(std::make_pair(hService, service));
     return *service;
 }

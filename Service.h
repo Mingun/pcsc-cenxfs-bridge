@@ -14,6 +14,8 @@
 #include "PCSCStatus.h"
 #include "XFSResult.h"
 
+namespace boost { namespace asio { class io_service; }}
+
 class ServiceImpl;
 class Service : public EventNotifier {
     /// Хендл XFS-сервиса, который представляет данный объект
@@ -34,7 +36,7 @@ private:
     @param hContext Ресурсный менеджер подсистемы PC/SC.
     @param readerName
     */
-    Service(HSERVICE hService, const std::string& readerName);
+    Service(HSERVICE hService, const std::string& readerName, boost::asio::io_service& service);
 public:
     ~Service();
     inline HSERVICE handle() const { return hService; }

@@ -4,11 +4,11 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include "Service.h"
+#include "ServiceImpl.h"
 
 #include "Utils.h"
 #include "PCSCMediaStatus.h"
 #include "PCSCReaderState.h"
-#include "ServiceImpl.h"
 
 #include <string>
 #include <sstream>
@@ -69,13 +69,12 @@ public:
 };*/
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service::Service(HSERVICE hService, const std::string& readerName)
+Service::Service(HSERVICE hService, const std::string& readerName, ba::io_service& ioService)
     : hService(hService)
     , hCard(0)
     , dwActiveProtocol(0)
     , readerName(readerName)
-    , impl(NULL)
-    //, impl(new ServiceImpl(ioService, *this))
+    , impl(new ServiceImpl(ioService, *this))
     {}
 Service::~Service() {
     if (hCard != 0) {

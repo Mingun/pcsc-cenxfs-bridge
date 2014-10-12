@@ -9,6 +9,7 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/asio/io_service.hpp>
 
 // PC/CS API
 #include <winscard.h>
@@ -35,6 +36,9 @@ public:
     SCARDCONTEXT hContext;
     /// Список карт, открытых для взаимодействия с системой XFS.
     ServiceMap services;
+    /// Сервис ввода-вывода, диспетчерезующий события от подсистемы PC/SC об изменениях
+    /// в надобе устройств и их состоянии.
+    boost::asio::io_service ioService;
     /// Поток для выполнения ожидания изменения в оборудовании.
     boost::shared_ptr<boost::thread> waitThread;
 public:
