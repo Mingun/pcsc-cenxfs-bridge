@@ -27,7 +27,7 @@ public:
     MediaStatus() : _Base(0) {}
     MediaStatus(DWORD value) : _Base(value) {}
     WORD translateMedia() {
-        switch (value) {
+        switch (mValue) {
         // Карта отсутствует в устройстве
         case SCARD_ABSENT: {
             // Media is not present in the device and not at the entering position.
@@ -52,11 +52,11 @@ public:
         case SCARD_NEGOTIABLE:
         // Карта была сброшена (reset) и установлен specific протокол общения.
         case SCARD_SPECIFIC: break;
-        }// switch (value)
+        }// switch (mValue)
         return 0;
     }
     WORD translateChipPower() {
-        switch (value) {
+        switch (mValue) {
         // Карта отсутствует в устройстве
         case SCARD_ABSENT: {
             // There is no card in the device.
@@ -88,7 +88,7 @@ public:
             // error state).
             return WFS_IDC_CHIPONLINE;
         }
-        }// switch (value)
+        }// switch (mValue)
         return 0;
     }
 

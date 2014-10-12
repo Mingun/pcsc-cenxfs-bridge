@@ -59,19 +59,22 @@ template<typename T, class Derived>
 class Enum {
     static const T defaultMask = ~((T)0);
 protected:
-    T value;
+    T mValue;
     template<class OS>
     friend inline OS& operator<<(OS& os, Enum<T, Derived> e) {
         return os << e.derived().name() << " (0x"
                   // На каждый байт требуется 2 символа.
-                  << std::hex << std::setw(2*sizeof(e.value)) << std::setfill('0')
-                  << e.value << ")";
+                  << std::hex << std::setw(2*sizeof(e.mValue)) << std::setfill('0')
+                  << e.mValue << ")";
     }
 protected:
-    Enum(T value) : value(value) {}
+    Enum(T value) : mValue(value) {}
 
+public:
+    inline T value() const { return mValue; }
+protected:
     bool name(const CTString* names, std::size_t begin, std::size_t end, T mask, CTString& result) const {
-        T val = value & mask;
+        T val = mValue & mask;
         if (val < (T)begin || val > (T)end) {
             result = CTString("<unknown>");
             return false;
@@ -109,10 +112,10 @@ private:
 template<typename T, class Derived>
 class Flags {
 protected:
-    T value;
+    T mValue;
     template<class OS>
     friend inline OS& operator<<(OS& os, Flags<T, Derived> f) {
-        os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(f.value)) << " (";
+        os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(f.mValue)) << " (";
         std::vector<CTString> names = f.derived().flagNames();
         bool first = true;
         for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {
@@ -128,16 +131,18 @@ protected:
         return os << ')';
     }
 protected:
-    Flags(T value) : value(value) {}
-
+    Flags(T value) : mValue(value) {}
+public:
+    inline T value() const { return mValue; }
+protected:
     template<std::size_t N>
     inline std::vector<CTString> flagNames(CTString (&names)[N]) const {
         std::vector<CTString> result(N);
-        if (value == (T)0) {
+        if (mValue == (T)0) {
             result[0] = names[0];
         }
         for (std::size_t i = 1; i < N; ++i) {
-            if (value & (1 << i)) {
+            if (mValue & (1 << i)) {
                 result[i] = names[i];
             }
         }

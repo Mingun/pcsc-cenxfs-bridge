@@ -25,40 +25,40 @@ public:
     DWORD translate() {
         DWORD result = 0;
         // Считыватель должен быть проигнорирован
-        if (value & SCARD_STATE_IGNORE) {
+        if (mValue & SCARD_STATE_IGNORE) {
         }
         // Состояние, которое известно менеджеру ресурсов, отличатет от того, что известно нам.
-        if (value & SCARD_STATE_CHANGED) {
+        if (mValue & SCARD_STATE_CHANGED) {
         }
         // Данный считыватель не распознался менеджером ресурсов. Также в этом случае стоят флаги
         // SCARD_STATE_CHANGED и SCARD_STATE_IGNORE
-        if (value & SCARD_STATE_UNKNOWN) {
+        if (mValue & SCARD_STATE_UNKNOWN) {
         }
         // Актуальное состояние считывателя получить нет возможности. Если флаг стоит, все последующие флаги сброшены.
-        if (value & SCARD_STATE_UNAVAILABLE) {
+        if (mValue & SCARD_STATE_UNAVAILABLE) {
         }
         // В считывателе нет карточки. Если флаг стоит, все последующие флаги сброшены.
-        if (value & SCARD_STATE_EMPTY) {
+        if (mValue & SCARD_STATE_EMPTY) {
         }
         // В считывателе есть карточка. Если флаг стоит, все последующие флаги сброшены.
-        if (value & SCARD_STATE_PRESENT) {
+        if (mValue & SCARD_STATE_PRESENT) {
         }
         // ATR карты в считывателе совпадает с ATR одной из целевых карт.
         // Флаг SCARD_STATE_PRESENT также стоит.
         // Данный флаг выставляется только функцией SCardLocateCards.
-        if (value & SCARD_STATE_ATRMATCH) {
+        if (mValue & SCARD_STATE_ATRMATCH) {
         }
         // Карточка в считывателе эксклюзивно захвачена другим прилоением. Флаг SCARD_STATE_PRESENT также стоит.
-        if (value & SCARD_STATE_EXCLUSIVE) {
+        if (mValue & SCARD_STATE_EXCLUSIVE) {
         }
         // Карточка уже используется другими приложениями, но может быть использована совместно,
         // если открыть ее в shared-режиме. Флаг SCARD_STATE_PRESENT также стоит.
-        if (value & SCARD_STATE_INUSE) {
+        if (mValue & SCARD_STATE_INUSE) {
         }
         // Карточка в считывателе не отвечает.
-        if (value & SCARD_STATE_MUTE) {
+        if (mValue & SCARD_STATE_MUTE) {
         }
-        if (value & SCARD_STATE_UNPOWERED) {
+        if (mValue & SCARD_STATE_UNPOWERED) {
         }
         return result;
     }

@@ -15,7 +15,7 @@ class Status : public Enum<LONG, Status> {
 public:
     Status(LONG value) : _Base(value) {}
 
-    operator bool() const { return value == 0; }
+    operator bool() const { return mValue == 0; }
 
     inline CTString name() {
         static CTString null;
@@ -117,7 +117,7 @@ public:
     }
     /// Конвертирует код возврата функций PC/SC в код возврата функций XFS.
     inline HRESULT translate() {
-        switch (value) {/*
+        switch (mValue) {/*
             case SCARD_S_SUCCESS:                 return WFS_SUCCESS;               // NO_ERROR
             case SCARD_F_INTERNAL_ERROR:          return WFS_ERR_INTERNAL_ERROR;    // _HRESULT_TYPEDEF_(0x80100001L)
             case SCARD_E_CANCELLED:               return ; // _HRESULT_TYPEDEF_(0x80100002L)
