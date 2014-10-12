@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 
+#include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -109,6 +110,8 @@ public:
     /// Список задач, упорядоченый по возрастанию времени дедлайна.
     /// Чем раньше дедлайн, тем ближе задача к голове списка.
     TaskList tasks;
+    /// Мьютекс для защиты `tasks` от одновременной модификации.
+    mutable boost::recursive_mutex tasksMutex;
     /// Поток для выполнения ожидания изменения в оборудовании.
     boost::shared_ptr<boost::thread> waitChangesThread;
 public:
@@ -143,6 +146,8 @@ public:// Подписка на события и генерация событ�
     bool addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
     bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
 private:
+    /// Вычисляет таймаут до ближайшего дедлайна потокобезопасным способом.
+    DWORD getTimeout() const;
     /// Блокирует выполнение, пока поток не будет остановлен. Необходимо
     /// запускать из своего потока.
     void waitChangesRun();

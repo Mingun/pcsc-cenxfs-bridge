@@ -73,6 +73,18 @@ void PCSC::waitChangesRun() {
     }
     WFMOutputTraceData("Reader changes dispatch thread stopped");
 }
+DWORD PCSC::getTimeout() const {
+    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
+
+    // Если имеются задачи, то ожидаем до их таймаута, в противном случае до бесконечности.
+    if (!tasks.empty()) {
+        // Время до ближайшего таймаута.
+        bc::steady_clock::duration dur = (*tasks.begin())->deadline - bc::steady_clock::now();
+        // Преобразуем его в миллисекунды
+        return (DWORD)bc::duration_cast<bc::milliseconds>(dur).count();
+    }
+    return INFINITE;
+}
 void PCSC::getReadersAndWaitChanges() {
     DWORD readersCount;
     // Определяем доступные считыватели: сначало количество, затем сами считыватели.
@@ -110,17 +122,9 @@ void PCSC::getReadersAndWaitChanges() {
     while (!waitChanges(readers));
 }
 bool PCSC::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
-    DWORD dwTimeout = INFINITE;
-    // Если имеются задачи, то ожидаем до их таймаута, в противном случае до бесконечности.
-    if (!tasks.empty()) {
-        // Время до ближайшего таймаута.
-        bc::steady_clock::duration dur = (*tasks.begin())->deadline - bc::steady_clock::now();
-        // Преобразуем его в миллисекунды
-        dwTimeout = (DWORD)bc::duration_cast<bc::milliseconds>(dur).count();
-    }
     // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
     // Ждем его до бесконечности.
-    Status st = SCardGetStatusChange(hContext, dwTimeout, &readers[0], (DWORD)readers.size());
+    Status st = SCardGetStatusChange(hContext, getTimeout(), &readers[0], (DWORD)readers.size());
     log("SCardGetStatusChange", st);
     // Если изменение вызвано таймаутом операции, выкидываем из очереди ожидания все
     // задачи, чей таймаут уже наступил
@@ -151,6 +155,8 @@ void PCSC::notifyChanges(SCARD_READERSTATE& state) {
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
         it->second->notify(state);
     }
+
+    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
     for (TaskList::iterator it = tasks.begin(); it != tasks.end();) {
         // Если задача ожидала этого события, то удаляем ее из списка.
         if ((*it)->match(state)) {
@@ -180,6 +186,8 @@ bool PCSC::cancelTask(HSERVICE hService, REQUESTID ReqID) {
     return false;
 }
 bool PCSC::addTaskImpl(const Task::Ptr& task) {
+    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
+
     std::pair<TaskList::iterator, bool> r = tasks.insert(task);
     // Вставляться должны уникальные по ReqID элементы.
     assert(r.second == false);
@@ -190,6 +198,8 @@ bool PCSC::addTaskImpl(const Task::Ptr& task) {
     return *byDeadline.begin() == task;
 }
 bool PCSC::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
+    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
+
     // Получаем второй индекс -- по трекинговому номеру
     typedef TaskList::nth_index<1>::type Index1;
     Index1& byID = tasks.get<1>();
@@ -203,6 +213,8 @@ bool PCSC::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
     return true;
 }
 void PCSC::processTimeouts(bc::steady_clock::time_point now) {
+    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
+
     // Получаем первый индекс -- по времени дедлайна
     typedef TaskList::nth_index<0>::type Index0;
     Index0& byDeadline = tasks.get<0>();
