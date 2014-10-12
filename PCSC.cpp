@@ -7,13 +7,13 @@
 #include "PCSCReaderState.h"
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
-PCSC::PCSC() : work(ioService) {
+PCSC::PCSC() {
     // Создаем контекст.
     Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
     log("SCardEstablishContext", st);
     // Запускаем поток ожидания изменений от системы PC/SC -- добавление и удаление
     // считывателей и карточек.
-    waitThread.reset(new boost::thread(&PCSC::run, this));
+    waitChangesThread.reset(new boost::thread(&PCSC::waitChangesRun, this));
 }
 /// Закрывает соединение к менеджеру подсистемы PC/SC.
 PCSC::~PCSC() {
@@ -27,7 +27,7 @@ PCSC::~PCSC() {
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Service& PCSC::create(HSERVICE hService, const std::string& readerName) {
-    Service* service = new Service(hService, readerName, ioService);
+    Service* service = new Service(*this, hService, readerName);
     services.insert(std::make_pair(hService, service));
     return *service;
 }
@@ -66,12 +66,12 @@ bool PCSC::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass)
     return true;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void PCSC::run() {
-    WFMOutputTraceData("Dispatch thread runned");
-    do {
+void PCSC::waitChangesRun() {
+    WFMOutputTraceData("Reader changes dispatch thread runned");
+    while (true) {
         getReadersAndWaitChanges();
-    } while (true);
-    WFMOutputTraceData("Dispatch thread stopped");
+    }
+    WFMOutputTraceData("Reader changes dispatch thread stopped");
 }
 void PCSC::getReadersAndWaitChanges() {
     DWORD readersCount;
@@ -110,10 +110,23 @@ void PCSC::getReadersAndWaitChanges() {
     while (!waitChanges(readers));
 }
 bool PCSC::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
+    DWORD dwTimeout = INFINITE;
+    // Если имеются задачи, то ожидаем до их таймаута, в противном случае до бесконечности.
+    if (!tasks.empty()) {
+        // Время до ближайшего таймаута.
+        bc::steady_clock::duration dur = tasks.begin()->deadline - bc::steady_clock::now();
+        // Преобразуем его в миллисекунды
+        dwTimeout = (DWORD)bc::duration_cast<bc::milliseconds>(dur).count();
+    }
     // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
     // Ждем его до бесконечности.
-    Status st = SCardGetStatusChange(hContext, INFINITE, &readers[0], (DWORD)readers.size());
+    Status st = SCardGetStatusChange(hContext, dwTimeout, &readers[0], (DWORD)readers.size());
     log("SCardGetStatusChange", st);
+    // Если изменение вызвано таймаутом операции, выкидываем из очереди ожидания все
+    // задачи, чей таймаут уже наступил
+    if (st.value() == SCARD_E_TIMEOUT) {
+        processTimeouts(bc::steady_clock::now());
+    }
     bool readersChanged = false;
     bool first = true;
     for (std::vector<SCARD_READERSTATE>::iterator it = readers.begin(); it != readers.end(); ++it) {
@@ -136,6 +149,67 @@ void PCSC::notifyChanges(SCARD_READERSTATE& state) const {
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
         it->second->notify(state);
     }
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void PCSC::addTask(const Task& task) {
+    if (addTaskImpl(task)) {
+        // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
+        // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
+        Status st = SCardCancel(hContext);
+        log("SCardCancel(addTask)", st);
+    }
+}
+bool PCSC::cancelTask(HSERVICE hService, REQUESTID ReqID) {
+    if (cancelTaskImpl(hService, ReqID)) {
+        // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
+        // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
+        Status st = SCardCancel(hContext);
+        log("SCardCancel(cancelTask)", st);
+        return true;
+    }
+    return false;
+}
+bool PCSC::addTaskImpl(const Task& task) {
+    std::pair<TaskList::iterator, bool> r = tasks.insert(task);
+    // Вставляться должны уникальные по ReqID элементы.
+    assert(r.second == false);
+    assert(!tasks.empty());
+    // Получаем первый индекс -- по времени дедлайна
+    typedef TaskList::nth_index<0>::type Index0;
+    Index0& byDeadline = tasks.get<0>();
+    return *byDeadline.begin() == task;
+}
+bool PCSC::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
+    // Получаем второй индекс -- по трекинговому номеру
+    typedef TaskList::nth_index<1>::type Index1;
+    Index1& byID = tasks.get<1>();
+    Index1::iterator it = byID.find(boost::make_tuple(hService, ReqID));
+    if (it == byID.end()) {
+        return false;
+    }
+    // Сигнализируем зарегистрированным слушателем о том, что задача отменена.
+    it->cancel();
+    byID.erase(it);
+    return true;
+}
+void PCSC::processTimeouts(bc::steady_clock::time_point now) {
+    // Получаем первый индекс -- по времени дедлайна
+    typedef TaskList::nth_index<0>::type Index0;
+    Index0& byDeadline = tasks.get<0>();
+    Index0::iterator begin = byDeadline.begin();
+    Index0::iterator it = begin;
+    for (; it != byDeadline.end(); ++it) {
+        // Извлекаем все задачи, чей таймаут наступил. Так как все задачи упорядочены по
+        // времени таймаута (чем раньше таймаут, тем ближе к голове очереди), то первая
+        // задача, таймаут которой еще не наступил, прерывает цепочку таймаутов.
+        if (it->deadline > now) {
+            break;
+        }
+        // Сигнализируем зарегистрированным слушателем о том, что произошел таймаут.
+        it->timeout();
+    }
+    // Удаляем завершенные таймаутом задачи.
+    byDeadline.erase(begin, it);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void PCSC::log(std::string operation, Status st) {

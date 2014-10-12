@@ -510,7 +510,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
 HRESULT SPI_API WFPCancelAsyncRequest(HSERVICE hService, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
-    if (!pcsc.get(hService).cancel(ReqID)) {
+    if (!pcsc.cancelTask(hService, ReqID)) {
         return WFS_ERR_INVALID_REQ_ID;
     }
     // Возможные коды завершения функции:

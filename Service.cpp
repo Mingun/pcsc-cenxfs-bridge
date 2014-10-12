@@ -1,12 +1,7 @@
-// Без этого компиляция падает с ошибкой
-// WinSock.h has already been included
-// при компиляции исходников boost::asio.
-#define WIN32_LEAN_AND_MEAN
-
 #include "Service.h"
-#include "ServiceImpl.h"
 
 #include "Utils.h"
+#include "PCSC.h"
 #include "PCSCMediaStatus.h"
 #include "PCSCReaderState.h"
 
@@ -69,19 +64,17 @@ public:
 };*/
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service::Service(HSERVICE hService, const std::string& readerName, ba::io_service& ioService)
-    : hService(hService)
+Service::Service(PCSC& pcsc, HSERVICE hService, const std::string& readerName)
+    : pcsc(pcsc)
+    , hService(hService)
     , hCard(0)
     , dwActiveProtocol(0)
     , readerName(readerName)
-    , impl(new ServiceImpl(ioService, *this))
     {}
 Service::~Service() {
     if (hCard != 0) {
         close();
     }
-    delete impl;
-    impl = NULL;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Status Service::open(SCARDCONTEXT hContext) {
@@ -207,11 +200,9 @@ std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+    namespace bc = boost::chrono;
     bc::steady_clock::time_point now = bc::steady_clock::now();
-    impl->addTask(Task(now + bc::milliseconds(dwTimeOut), hWnd, ReqID, *this));
-}
-bool Service::cancel(REQUESTID ReqID) {
-    return impl->cancelTask(ReqID);
+    pcsc.addTask(Task(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID));
 }
 std::pair<WFSIDCCARDDATA*, Status> Service::read() const {
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();

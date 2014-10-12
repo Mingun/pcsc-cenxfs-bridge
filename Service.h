@@ -14,10 +14,9 @@
 #include "PCSCStatus.h"
 #include "XFSResult.h"
 
-namespace boost { namespace asio { class io_service; }}
-
-class ServiceImpl;
+class PCSC;
 class Service : public EventNotifier {
+    PCSC& pcsc;
     /// Хендл XFS-сервиса, который представляет данный объект
     HSERVICE hService;
     /// Хендл карты, с которой будет производиться работа.
@@ -27,8 +26,6 @@ class Service : public EventNotifier {
     /// Название считывателя, для которого открыт протокол.
     std::string readerName;
 
-    /// Реализация сервиса, ведающая рассылкой асинхронных уведомлений.
-    ServiceImpl* impl;
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class PCSC;
 private:
@@ -36,7 +33,7 @@ private:
     @param hContext Ресурсный менеджер подсистемы PC/SC.
     @param readerName
     */
-    Service(HSERVICE hService, const std::string& readerName, boost::asio::io_service& service);
+    Service(PCSC& pcsc, HSERVICE hService, const std::string& readerName);
 public:
     ~Service();
     inline HSERVICE handle() const { return hService; }
@@ -46,7 +43,10 @@ public:
 
     Status lock();
     Status unlock();
-    /// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
+    /** Данный метод вызывается при любом изменении любого считывателя и при изменении количества считывателей.
+    @param state
+        Информация о текущем состоянии изменившегося считывателя.
+    */
     void notify(SCARD_READERSTATE& state) const;
     inline void sendResult(HWND hWnd, REQUESTID ReqID, DWORD messageType, HRESULT result) const {
         Result(ReqID, hService, result).send(hWnd, messageType);
@@ -75,12 +75,6 @@ public:// Функции, вызываемые в WFPExecute
         `WFS_EXECUTE_COMPLETE`.
     */
     void asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID);
-    /** Отменяет ранее начатую через asyncRead операцию асинхронного чтения.
-    @return
-        `true`, если операция была отменена и `false`, если для данного
-        трекингового номера нет незавершенного асинхронного запроса.
-    */
-    bool cancel(REQUESTID ReqID);
 
     std::pair<WFSIDCCARDDATA*, Status> read() const;
     std::pair<WFSIDCCHIPIO*, Status> transmit(WFSIDCCHIPIO* input) const;
