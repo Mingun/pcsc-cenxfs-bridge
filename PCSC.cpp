@@ -68,8 +68,11 @@ bool PCSC::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void PCSC::waitChangesRun() {
     WFMOutputTraceData("Reader changes dispatch thread runned");
+    // Первоначально состояние неизвестное нам.
+    DWORD readersState = SCARD_STATE_UNAWARE;
     while (!stopRequested) {
-        getReadersAndWaitChanges();
+        // На входе текущее состояние считывателей -- на выходе новое состояние.
+        readersState = getReadersAndWaitChanges(readersState);
     }
     WFMOutputTraceData("Reader changes dispatch thread stopped");
 }
@@ -85,41 +88,64 @@ DWORD PCSC::getTimeout() const {
     }
     return INFINITE;
 }
-void PCSC::getReadersAndWaitChanges() {
-    DWORD readersCount;
+
+/// Получаем список имен считывателей из строки со всеми именами, разделенными символом '\0'.
+std::vector<const char*> getReaderNames(const std::vector<char>& readerNames) {
+    std::stringstream ss;
+    ss << std::string("Avalible readers:\n");
+    std::size_t i = 0;
+    std::size_t k = 0;
+    std::vector<const char*> names;
+    const std::size_t size = readerNames.size();
+    while (i < size) {
+        const char* name = &readerNames[i];
+        ss << ++k << ": " << name << std::endl;
+
+        names.push_back(name);
+        // Ещем начало следующей строки.
+        while (i < size && readerNames[i] != '\0') ++i;
+        // Пропускаем '\0'.
+        ++i;
+    }
+    WFMOutputTraceData((LPSTR)ss.str().c_str());
+    return names;
+}
+DWORD PCSC::getReadersAndWaitChanges(DWORD readersState) {
+    DWORD readersCount = 0;
     // Определяем доступные считыватели: сначало количество, затем сами считыватели.
     Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
     log("SCardListReaders(get readers count)", st);
+
     // Получаем имена доступных считывателей. Все имена расположены в одной строке,
     // разделены символом '\0' в в конце списка также символ '\0' (т.о. в конце массива
-    // идеет подряд два '\0').
+    // идет подряд два '\0').
     std::vector<char> readerNames(readersCount);
-    st = SCardListReaders(hContext, NULL, &readerNames[0], &readersCount);
-    log("SCardListReaders(get readers)", st);
+    if (readersCount != 0) {
+        st = SCardListReaders(hContext, NULL, &readerNames[0], &readersCount);
+        log("SCardListReaders(get readers)", st);
+    }
+
+    std::vector<const char*> names = getReaderNames(readerNames);
 
     // Готовимся к ожиданию событий от всех обнаруженных считывателей и
     // изменению их количества.
-    std::vector<SCARD_READERSTATE> readers(1+readersCount);
+    std::vector<SCARD_READERSTATE> readers(1 + names.size());
     // Считыватель со специальным именем, означающем, что необходимо мониторить
     // появление/пропажу считывателей.
     readers[0].szReader = "\\\\?PnP?\\Notification";
-    readers[0].dwCurrentState = SCARD_STATE_UNAWARE;
+    readers[0].dwCurrentState = readersState;
 
     // Заполняем структуры для ожидания событий от найденных считывателей.
-    std::size_t i = 0;
-    std::vector<char>::const_iterator begin = readerNames.begin();
-    for (std::vector<char>::const_iterator it = begin; it != readerNames.end() && i < readersCount;) {
-        if (*it == '\0') {
-            readers[1 + i++].szReader = static_cast<LPCSTR>(&*begin);
-            begin = ++it;
-            continue;
-        }
-        ++it;
+    for (std::size_t i = 0; i < names.size(); ++i) {
+        readers[1 + i].szReader = names[i];
     }
+
     // Ожидаем событий от считывателей. Если их количество обновилось,
     // то прекращаем ожидание. Повторный вход в данную процедуру случится
     // на следующем витке цикла в run.
     while (!waitChanges(readers));
+    // Возвращаем текущее состояние наблюдателя за считывателями.
+    return readers[0].dwCurrentState;
 }
 bool PCSC::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
