@@ -17,6 +17,12 @@ PCSC::PCSC() : stopRequested(false) {
 }
 /// Закрывает соединение к менеджеру подсистемы PC/SC.
 PCSC::~PCSC() {
+    // Запрашиваем остановку потока.
+    stopRequested = true;
+    // Сигнализируем о том, что необходимо прервать ожидание
+    SCardCancel(hContext);
+    // Ожидаем, пока дойдет.
+    waitChangesThread->join();
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
         assert(it->second != NULL);
         delete it->second;
@@ -143,7 +149,12 @@ DWORD PCSC::getReadersAndWaitChanges(DWORD readersState) {
     // Ожидаем событий от считывателей. Если их количество обновилось,
     // то прекращаем ожидание. Повторный вход в данную процедуру случится
     // на следующем витке цикла в run.
-    while (!waitChanges(readers));
+    while (!waitChanges(readers)) {
+        if (stopRequested) {
+            // Не важно, что возвращать, нам лишь бы выйти.
+            return 0;
+        }
+    }
     // Возвращаем текущее состояние наблюдателя за считывателями.
     return readers[0].dwCurrentState;
 }
