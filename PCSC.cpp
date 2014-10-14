@@ -7,7 +7,7 @@
 #include "PCSCReaderState.h"
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
-PCSC::PCSC() {
+PCSC::PCSC() : stopRequested(false) {
     // Создаем контекст.
     Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
     log("SCardEstablishContext", st);
@@ -68,7 +68,7 @@ bool PCSC::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void PCSC::waitChangesRun() {
     WFMOutputTraceData("Reader changes dispatch thread runned");
-    while (true) {
+    while (!stopRequested) {
         getReadersAndWaitChanges();
     }
     WFMOutputTraceData("Reader changes dispatch thread stopped");

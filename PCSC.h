@@ -114,6 +114,9 @@ public:
     mutable boost::recursive_mutex tasksMutex;
     /// Поток для выполнения ожидания изменения в оборудовании.
     boost::shared_ptr<boost::thread> waitChangesThread;
+    /// Флаг, выставляемый основным потоком, когда возникнет необходимость остановить
+    ///`waitChangesThread`.
+    bool stopRequested;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
     PCSC();
