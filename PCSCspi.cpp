@@ -7,6 +7,7 @@
 #include "xfsspi.h"
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
+#include <xfsconf.h>
 // Для std::pair
 #include <utility>
 // Для strncpy.
@@ -43,24 +44,90 @@ class RegKey {
     HKEY hKey;
 public:
     inline RegKey(HKEY root, const char* name) {
-        WFMOpenKey(root, (LPSTR)name, &hKey);
+        HRESULT r = WFMOpenKey(root, (LPSTR)name, &hKey);
+        std::stringstream ss;
+        ss << std::string("RegKey::RegKey(") << root << ", " << (name == NULL ? "NULL" : name) << ", &" << hKey << ") = "  << r;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
-    inline ~RegKey() { WFMCloseKey(hKey); }
+    inline ~RegKey() {
+        HRESULT r = WFMCloseKey(hKey);
+        std::stringstream ss;
+        ss << std::string("WFMCloseKey(") << hKey << ") = " << r;
+        WFMOutputTraceData((LPSTR)ss.str().c_str ());
+    }
 
-    inline RegKey child(const char* name) {
+    inline RegKey child(const char* name) const {
         return RegKey(hKey, name);
     }
-    inline std::string value(const char* name) {
-        DWORD dwSize;
-        WFMQueryValue(hKey, (LPSTR)name, NULL, &dwSize);
+    inline std::string value(const char* name) const {
+        // Узнаем размер значения ключа.
+        DWORD dwSize = 0;
+        HRESULT r = WFMQueryValue(hKey, (LPSTR)name, NULL, &dwSize);
+        {std::stringstream ss;
+        ss << '(' << dwSize << ')' << r;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());}
         // Используем вектор, т.к. он гарантирует непрерывность памяти под данные,
         // чего нельзя сказать в случае со string.
-        std::vector<char> value;
-        value.reserve(dwSize);
-        WFMQueryValue(hKey, (LPSTR)name, &value[0], &dwSize);
-        return std::string(value.begin(), value.end());
+        // dwSize содержит длину строки без завершающего NULL, но он записывается в выходное значение.
+        std::vector<char> value(dwSize+1);
+        if (dwSize > 0) {
+            dwSize = value.capacity();
+            r = WFMQueryValue(hKey, (LPSTR)name, &value[0], &dwSize);
+            {std::stringstream ss;
+            ss << '(' << dwSize << ')' << r;
+            WFMOutputTraceData((LPSTR)ss.str().c_str());}
+        }
+        std::string result = std::string(value.begin(), value.end());
+        std::stringstream ss;
+        ss << std::string("RegKey::value(") << name << ") = " << result;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
+        return result;
+    }
+    void keys() const {
+        WFMOutputTraceData("keys");
+        std::vector<char> keyName(256);
+        for (DWORD i = 0; ; ++i) {
+            DWORD size = keyName.capacity();
+            HRESULT r = WFMEnumKey(hKey, i, &keyName[0], &size, NULL);
+            if (r == WFS_ERR_CFG_NO_MORE_ITEMS) {
+                break;
+            }
+            keyName[size] = '\0';
+            WFMOutputTraceData((LPSTR)&keyName[0]);
+        }
+    }
+    void values() const {
+        WFMOutputTraceData("values");
+        // К сожалению, узнать конкретные длины невозможно.
+        std::vector<char> name(256);
+        std::vector<char> value(256);
+        for (DWORD i = 0; ; ++i) {
+            DWORD szName = name.capacity();
+            DWORD szValue = value.capacity();
+            HRESULT r = WFMEnumValue(hKey, i, &name[0], &szName, &value[0], &szValue);
+            if (r == WFS_ERR_CFG_NO_MORE_ITEMS) {
+                break;
+            }
+            name[szName] = '\0';
+            value[szValue] = '\0';
+            std::stringstream ss;
+            ss << i << ": " << '('<<szName<<','<<szValue<<')' << std::string(name.begin(), name.begin()+szName) << "="
+               << std::string(value.begin(), value.begin()+szValue);
+            WFMOutputTraceData((LPSTR)ss.str().c_str());
+        }
+    }
+    static void log(std::string operation, HRESULT r) {
+        std::stringstream ss;
+        ss << operation << r;
+        WFMOutputTraceData((LPSTR)ss.str().c_str ());
     }
 };
+
+std::string getReaderName(HKEY root, LPSTR lpszLogicalName) {
+    // Получаем имя нашего провайдера
+    std::string selfName = RegKey(root, "LOGICAL_SERVICES").child(lpszLogicalName).value("Provider");
+    return RegKey(root, "SERVICE_PROVIDERS").child(selfName.c_str()).value("ReaderName");
+}
 /** При загрузке DLL будут вызваны конструкторы всех глобальных объектов и установится
     соединение с подсистемой PC/SC. При выгрузке DLL вызовутся деструкторы глобальных
     объектов и соединение автоматически закроется.
@@ -126,7 +193,8 @@ HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
     }
 
     //TODO: получить имя считывателя из реестра!
-    pcsc.create(hService, "DummyReader");
+    std::string readerName = "OMNIKEY AG Smart Card Reader USB 0";//getReaderName(WFS_CFG_HKEY_XFS_ROOT, lpszLogicalName);
+    pcsc.create(hService, readerName);
     Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_OPEN_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)

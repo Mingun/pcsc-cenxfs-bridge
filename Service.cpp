@@ -20,6 +20,7 @@ class CardInserted {
 public:
     CardInserted(HSERVICE hService) : hService(hService) {}
     Result operator()() const {
+        WFMOutputTraceData("Send CardInserted event");
         return Result(0, hService, WFS_SUCCESS).cardInserted();
     }
 };
@@ -29,6 +30,7 @@ class CardRemoved {
 public:
     CardRemoved(HSERVICE hService) : hService(hService) {}
     Result operator()() const {
+        WFMOutputTraceData("Send CardRemoved event");
         return Result(0, hService, WFS_SUCCESS).cardRemoved();
     }
 };
@@ -39,6 +41,7 @@ class DeviceDetected {
 public:
     DeviceDetected(HSERVICE hService, SCARD_READERSTATE& state) : hService(hService), state(state) {}
     Result operator()() const {
+        WFMOutputTraceData("Send DeviceDetected event");
         WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
         // Имя физичеcкого устройства, чье состояние изменилось
         strcpy(status->lpszPhysicalName, state.szReader);
