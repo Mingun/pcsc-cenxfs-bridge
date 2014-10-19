@@ -12,6 +12,7 @@
 
 #include "EventSupport.h"
 #include "PCSCStatus.h"
+#include "Settings.h"
 
 class PCSC;
 class Service : public EventNotifier {
@@ -22,16 +23,17 @@ class Service : public EventNotifier {
     SCARDHANDLE hCard;
     /// Протокол, по которому работает карта.
     DWORD dwActiveProtocol;
-    /// Название считывателя, для которого открыт протокол.
-    std::string readerName;
+    /// Настройки данного сервиса.
+    Settings settings;
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class PCSC;
 private:
     /** Открывает указанную карточку для работы.
-    @param hContext Ресурсный менеджер подсистемы PC/SC.
-    @param readerName
+    @param pcsc Ресурсный менеджер подсистемы PC/SC.
+    @param hService Хендл, присвоенный сервису XFS-менеджером.
+    @param settings Настройки XFS-сервиса.
     */
-    Service(PCSC& pcsc, HSERVICE hService, const std::string& readerName);
+    Service(PCSC& pcsc, HSERVICE hService, const Settings& settings);
 public:
     ~Service();
     inline HSERVICE handle() const { return hService; }
@@ -41,6 +43,8 @@ public:
 
     Status lock();
     Status unlock();
+
+    inline void setTraceLevel(DWORD level) { settings.traceLevel = level; }
     /** Данный метод вызывается при любом изменении любого считывателя и при изменении количества считывателей.
     @param state
         Информация о текущем состоянии изменившегося считывателя.

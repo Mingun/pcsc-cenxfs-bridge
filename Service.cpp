@@ -83,12 +83,12 @@ public:
 };*/
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service::Service(PCSC& pcsc, HSERVICE hService, const std::string& readerName)
+Service::Service(PCSC& pcsc, HSERVICE hService, const Settings& settings)
     : pcsc(pcsc)
     , hService(hService)
     , hCard(0)
     , dwActiveProtocol(0)
-    , readerName(readerName)
+    , settings(settings)
     {}
 Service::~Service() {
     if (hCard != 0) {
@@ -98,7 +98,7 @@ Service::~Service() {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Status Service::open(SCARDCONTEXT hContext) {
     assert(hCard == 0 && "Must open only one card at one service");
-    Status st = SCardConnect(hContext, readerName.c_str(), SCARD_SHARE_SHARED,
+    Status st = SCardConnect(hContext, settings.readerName.c_str(), SCARD_SHARE_SHARED,
         // У нас нет предпочитаемого протокола, работаем с тем, что дают
         SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
         // Получаем хендл карты и выбранный протокол.
@@ -252,6 +252,6 @@ std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) const {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Service::log(std::string operation, Status st) const {
     std::stringstream ss;
-    ss << operation << " card reader '" << readerName << "': " << st;
+    ss << operation << " card reader '" << settings.readerName << "': " << st;
     WFMOutputTraceData((LPSTR)ss.str().c_str());
 }

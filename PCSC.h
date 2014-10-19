@@ -78,6 +78,7 @@ public:
     }
 };
 class Service;
+class Settings;
 /** Класс, в конструкторе инициализирующий подсистему PC/SC, а в деструкторе закрывающий ее.
     Необходимо Создать ровно один экземпляр данного класса при загрузке DLL и уничтожить его
     при выгрузке. Наиболее просто это делается, путем объявления глобальной переменной данного
@@ -126,7 +127,7 @@ public:
     inline bool isValid(HSERVICE hService) {
         return services.find(hService) != services.end();
     }
-    Service& create(HSERVICE hService, const std::string& readerName);
+    Service& create(HSERVICE hService, const Settings& settings);
     Service& get(HSERVICE hService);
     void remove(HSERVICE hService);
     void addTask(const Task::Ptr& task);

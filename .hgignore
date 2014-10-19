@@ -2,3 +2,4 @@ syntax: glob
 *.dll
 *.lib
 *.obj
+*.exp

@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "Service.h"
+#include "Settings.h"
 #include "PCSCReaderState.h"
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
@@ -32,8 +33,8 @@ PCSC::~PCSC() {
     log("SCardReleaseContext", st);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service& PCSC::create(HSERVICE hService, const std::string& readerName) {
-    Service* service = new Service(*this, hService, readerName);
+Service& PCSC::create(HSERVICE hService, const Settings& settings) {
+    Service* service = new Service(*this, hService, settings);
     services.insert(std::make_pair(hService, service));
     return *service;
 }
