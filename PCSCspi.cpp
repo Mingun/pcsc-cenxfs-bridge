@@ -413,7 +413,8 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
         // Ждет указанное время, пока не вставят карточку, а потом записывает данные на указанный трек.
         // Не поддерживаем, т.к. не умеем писать треки.
         case WFS_CMD_IDC_WRITE_RAW_DATA: {
-            //WFSIDCCARDDATA* data = (WFSIDCCARDDATA*)lpCmdData;
+            //NULL-terminated массив
+            //WFSIDCCARDDATA** data = (WFSIDCCARDDATA**)lpCmdData;
             return WFS_ERR_UNSUPP_COMMAND;
         }
         // Посылает данные чипу и полуучает от него ответ. Данные прозрачны для провайдера.

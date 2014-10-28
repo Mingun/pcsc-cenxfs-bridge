@@ -223,16 +223,24 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     bc::steady_clock::time_point now = bc::steady_clock::now();
     pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID)));
 }
-std::pair<WFSIDCCARDDATA*, Status> Service::read() const {
+std::pair<WFSIDCCARDDATA**, Status> Service::read() const {
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
     data->wDataSource = WFS_IDC_CHIP;
     //TODO: Статус прочитанных данных необходимо выставлять в соответствии со статусом,
     // который вернула SCardGetAttrib.
     data->wStatus = WFS_IDC_DATAOK;
-    // Получаем ATR (Answer To Reset).
-    Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
-    return std::make_pair(data, st);
+    // Получаем ATR (Answer To Reset). Сначала длину, потом сами данные.
+    Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, NULL, &data->ulDataLength);
+    log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, NULL, ?)", st);
+    data->lpbData = xfsAllocArr<BYTE>(data->ulDataLength);
+    st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
+    log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, ?, ?)", st);
+    // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
+    // В первом элементе будет наш результат, во втором NULL -- признак конца массива.
+    WFSIDCCARDDATA** result = xfsAllocArr<WFSIDCCARDDATA*>(2);
+    result[0] = data;
+    return std::make_pair(result, st);
 }
 std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) const {
     assert(input != NULL);
