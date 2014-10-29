@@ -302,7 +302,8 @@ HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
     switch (dwCategory) {
         case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет
             std::pair<WFSIDCSTATUS*, Status> status = pcsc.get(hService).getStatus();
-            Result(ReqID, hService, status.second).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
+            // Получение информации о считывателе всегда успешно.
+            Result(ReqID, hService, 0).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_CAPABILITIES: {// Дополнительных параметров нет
