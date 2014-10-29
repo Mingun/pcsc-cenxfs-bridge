@@ -113,7 +113,7 @@ public:
         //      Facility - is the facility code
         //
         //      Code - is the facility's status code
-        return _Base::name(names, (LONG)0x0000FFFF);
+        return _Base::name(names, mValue & 0x0000FFFF);
     }
     /// Конвертирует код возврата функций PC/SC в код возврата функций XFS.
     inline HRESULT translate() {

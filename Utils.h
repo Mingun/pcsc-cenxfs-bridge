@@ -69,7 +69,6 @@ static T* xfsAllocArr(std::size_t size) {
 
 template<typename T, class Derived>
 class Enum {
-    static const T defaultMask = ~((T)0);
 protected:
     T mValue;
     template<class OS>
@@ -85,36 +84,36 @@ protected:
 public:
     inline T value() const { return mValue; }
 protected:
-    bool name(const CTString* names, std::size_t begin, std::size_t end, T mask, CTString& result) const {
-        T val = mValue & mask;
-        if (val < (T)begin || val > (T)end) {
+    static bool name(const CTString* names, std::size_t begin, std::size_t end, T value, CTString& result) {
+        if (value < (T)begin || value > (T)end) {
             result = CTString("<unknown>");
             return false;
         }
-        result = names[val];
+        result = names[value];
         return true;
     }
-    inline bool name(const CTString* names, std::size_t begin, std::size_t end, CTString& result) const {
-        return name(names, begin, end, defaultMask, result);
+    template<std::size_t N>
+    static inline bool name(CTString (&names)[N], T value, CTString& result) {
+        return name(names, 0, N, value, result);
     }
     template<std::size_t N>
-    inline bool name(CTString (&names)[N], T mask, CTString& result) const {
-        return name(names, 0, N, mask, result);
+    static inline CTString name(CTString (&names)[N], T value) {
+        CTString result;
+        name(names, 0, N, value, result);
+        return result;
+    }
+protected:
+    inline bool name(const CTString* names, std::size_t begin, std::size_t end, CTString& result) const {
+        return name(names, begin, end, mValue, result);
     }
     template<std::size_t N>
     inline bool name(CTString (&names)[N], CTString& result) const {
-        return name(names, 0, N, defaultMask, result);
-    }
-    template<std::size_t N>
-    inline CTString name(CTString (&names)[N], T mask) const {
-        CTString result;
-        name(names, 0, N, mask, result);
-        return result;
+        return name(names, 0, N, mValue, result);
     }
     template<std::size_t N>
     inline CTString name(CTString (&names)[N]) const {
         CTString result;
-        name(names, 0, N, defaultMask, result);
+        name(names, 0, N, mValue, result);
         return result;
     }
 private:

@@ -162,7 +162,7 @@ std::pair<WFSIDCSTATUS*, Status> Service::getStatus() {
 
     WFSIDCSTATUS* lpStatus = xfsAlloc<WFSIDCSTATUS>();
     // Набор флагов, определяющих состояние устройства. Наше устройство всегда на связи,
-    // т.к. в противном случае при открытии сесии с PC/SC драйвером будет ошибка.
+    // т.к. в противном случае при открытии сессии с PC/SC драйвером будет ошибка.
     lpStatus->fwDevice = WFS_IDC_DEVONLINE;
     lpStatus->fwMedia = st ? state.translateMedia() : WFS_IDC_MEDIANOTPRESENT;
     // У считывателей нет корзины для захваченных карт.

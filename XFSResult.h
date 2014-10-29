@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <string>
+#include <sstream>
 #include <cassert>
 
 // Для REQUESTID, HSERVICE, HRESULT, LONG и DWORD
@@ -11,7 +13,7 @@
 #include <winuser.h>
 // Для GetSystemTime
 #include <WinBase.h>
-// Определения для ридеров карт (Identification card unit (IDC)), для WFMAllocateBuffer и WFSRESULT
+// Определения для ридеров карт (Identification card unit (IDC)), для WFMAllocateBuffer, WFMOutputTraceData и WFSRESULT
 #include <XFSIDC.h>
 
 #include "Utils.h"
@@ -43,13 +45,13 @@ public:
             CTString("WFS_TIMER_EVENT"        ), // (WM_USER + 100)
         };
         CTString result;
-        if (_Base::name(names1, result)) {
+        if (_Base::name(names1, mValue - (WM_USER + 1), result)) {
             return result;
         }
-        if (_Base::name(names2, result)) {
+        if (_Base::name(names2, mValue - (WM_USER + 20), result)) {
             return result;
         }
-        return _Base::name(names3);
+        return _Base::name(names3, mValue - (WM_USER + 100));
     }
 };
 
@@ -129,6 +131,9 @@ public:// События доступности карты в считывате
     }
     void send(HWND hWnd, DWORD messageType) {
         assert(pResult != NULL);
+        std::stringstream ss;
+        ss << std::string("send ") << pResult->hResult << " for " << MsgType(messageType) << " to " << hWnd;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
         PostMessage(hWnd, messageType, NULL, (LPARAM)pResult);
     }
 private:
