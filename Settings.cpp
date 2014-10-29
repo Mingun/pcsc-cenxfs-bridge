@@ -57,7 +57,7 @@ public:
         // Узнаем размер значения ключа.
         DWORD result = 0;
         DWORD dwSize = sizeof(DWORD);
-        HRESULT r = WFMQueryValue(hKey, (LPSTR)name, &result, &dwSize);
+        HRESULT r = WFMQueryValue(hKey, (LPSTR)name, (LPSTR)&result, &dwSize);
         std::stringstream ss;
         ss << std::string("RegKey::value(") << name << ") = " << result;
         WFMOutputTraceData((LPSTR)ss.str().c_str());
