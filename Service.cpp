@@ -89,7 +89,10 @@ Service::Service(PCSC& pcsc, HSERVICE hService, const Settings& settings)
     , hCard(0)
     , dwActiveProtocol(0)
     , settings(settings)
-    {}
+{
+    std::string json = "Settings: " + settings.toJSONString();
+    WFMOutputTraceData((LPSTR)json.c_str());
+}
 Service::~Service() {
     if (hCard != 0) {
         close();
@@ -190,7 +193,9 @@ std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
     // Устройство содержит только считыватель карт.
     lpCaps->bCompound = FALSE;
     // Какие треки могут быть прочитаны -- никакие, только чип.
-    lpCaps->fwReadTracks = WFS_IDC_NOTSUPP;
+    // Так как Kalignite не желает работать, если считыватель не умеет читать хоть какой-то
+    // трек, то сообщаем, что умеем читать самый востребованный, чтобы удовлетворить Kaliginte.
+    lpCaps->fwReadTracks = settings.reportReadTrack2 ? WFS_IDC_TRACK2 : WFS_IDC_NOTSUPP;
     // Какие треки могут быть записаны -- никакие, только чип.
     lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
     // Виды поддерживаемых устройством протоколов -- все возможные.

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <iostream>
 // XFS API для функций доступа к реестру.
 #include <xfsconf.h>
 // Для WFMOutputTraceData.
@@ -46,7 +47,17 @@ public:
             ss << '(' << dwSize << ')' << r;
             WFMOutputTraceData((LPSTR)ss.str().c_str());}
         }
-        std::string result = std::string(value.begin(), value.end());
+        std::string result = std::string(value.begin(), value.end()-1);
+        std::stringstream ss;
+        ss << std::string("RegKey::value(") << name << ") = " << result;
+        WFMOutputTraceData((LPSTR)ss.str().c_str());
+        return result;
+    }
+    inline DWORD dwValue(const char* name) const {
+        // Узнаем размер значения ключа.
+        DWORD result = 0;
+        DWORD dwSize = sizeof(DWORD);
+        HRESULT r = WFMQueryValue(hKey, (LPSTR)name, &result, &dwSize);
         std::stringstream ss;
         ss << std::string("RegKey::value(") << name << ") = " << result;
         WFMOutputTraceData((LPSTR)ss.str().c_str());
@@ -97,8 +108,26 @@ public:
 
 Settings::Settings(const char* serviceName, int traceLevel)
     : traceLevel(traceLevel)
+    , reportReadTrack2(false)
 {
-    HKEY root = WFS_CFG_HKEY_XFS_ROOT;
+    // У Калигнайта под данным корнем не появляется провайдера, если он в
+    // HKEY_LOCAL_MACHINE\SOFTWARE\XFS\SERVICE_PROVIDERS\
+    // HKEY root = WFS_CFG_HKEY_XFS_ROOT;
+    HKEY root = WFS_CFG_USER_DEFAULT_XFS_ROOT;
     providerName = RegKey(root, "LOGICAL_SERVICES").child((LPSTR)serviceName).value("Provider");
-    readerName = RegKey(root, "SERVICE_PROVIDERS").child(providerName.c_str()).value("ReaderName");
+
+    RegKey pcscSettings = RegKey(root, "SERVICE_PROVIDERS").child(providerName.c_str());
+
+    readerName = pcscSettings.value("ReaderName");
+    reportReadTrack2 = pcscSettings.dwValue("ReportReadTrack2") != 0;
+}
+std::string Settings::toJSONString() const {
+    std::stringstream ss;
+    ss << "{\n";
+    ss << "ProviderName: " << providerName << ",\n";
+    ss << "ReaderName: " << readerName << ",\n";
+    ss << "TraceLevel: " << traceLevel << ",\n";
+    ss << "ReportReadTrack2: " << std::boolalpha << reportReadTrack2 << ",\n";
+    ss << '}';
+    return ss.str();
 }
