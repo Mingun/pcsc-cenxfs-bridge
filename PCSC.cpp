@@ -99,20 +99,22 @@ DWORD PCSC::getTimeout() const {
 /// Получаем список имен считывателей из строки со всеми именами, разделенными символом '\0'.
 std::vector<const char*> getReaderNames(const std::vector<char>& readerNames) {
     std::stringstream ss;
-    ss << std::string("Avalible readers:\n");
+    ss << std::string("Avalible readers:");
     std::size_t i = 0;
     std::size_t k = 0;
     std::vector<const char*> names;
     const std::size_t size = readerNames.size();
     while (i < size) {
         const char* name = &readerNames[i];
-        ss << ++k << ": " << name << std::endl;
-
-        names.push_back(name);
-        // Ещем начало следующей строки.
+        // Ищем начало следующей строки.
         while (i < size && readerNames[i] != '\0') ++i;
         // Пропускаем '\0'.
         ++i;
+
+        if (i < size) {
+            ss << std::endl << ++k << ": " << name;
+            names.push_back(name);
+        }
     }
     WFMOutputTraceData((LPSTR)ss.str().c_str());
     return names;
