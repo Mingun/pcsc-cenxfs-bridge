@@ -44,7 +44,7 @@ public:
         WFMOutputTraceData("Send DeviceDetected event");
         WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
         // Имя физичеcкого устройства, чье состояние изменилось
-        strcpy(status->lpszPhysicalName, state.szReader);
+        status->lpszPhysicalName = (LPSTR)XFSStr(state.szReader).begin();
         // Рабочая станция, на которой запущен сервис.
         status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
         status->dwState = ReaderState(state.dwEventState).translate();

@@ -7,6 +7,7 @@
 // Для std::size_t
 #include <cstddef>
 #include <cassert>
+#include <cstring>
 // Для WFMAllocateBuffer
 #include <xfsadmin.h>
 
@@ -66,6 +67,24 @@ static T* xfsAllocArr(std::size_t size) {
     return result;
 }
 
+class XFSStr {
+    const char* mBegin;
+    const char* mEnd;
+public:
+    explicit XFSStr(const char* str) {
+        std::size_t len = std::strlen(str) + 1;
+        char* data = xfsAllocArr<char>(len);
+        std::strncpy(data, str, len);
+        mBegin = data;
+        mEnd = data + len;
+    }
+
+    inline std::size_t size() const { return mEnd - mBegin; }
+    inline bool empty() const { return size() == 0; }
+    inline bool isValid() const { return mBegin != 0; }
+    inline const char* begin() const { return mBegin; }
+    inline const char* end() const { return mEnd; }
+};
 
 template<typename T, class Derived>
 class Enum {
