@@ -83,6 +83,7 @@ public:// Заполнение результатов команд WFPExecute
     /// Прикрепляет к результату указанные данные возможностей устройства.
     inline Result& data(WFSIDCCARDDATA* data) {
         assert(pResult != NULL);
+        assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwCommandCode = WFS_CMD_IDC_READ_RAW_DATA;
         pResult->lpBuffer = data;
         return *this;
@@ -90,6 +91,7 @@ public:// Заполнение результатов команд WFPExecute
     /// Прикрепляет к результату указанные данные возможностей устройства.
     inline Result& data(WFSIDCCHIPIO* data) {
         assert(pResult != NULL);
+        assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwCommandCode = WFS_CMD_IDC_CHIP_IO;
         pResult->lpBuffer = data;
         return *this;
@@ -126,6 +128,7 @@ public:// События доступности карты в считывате
         assert(pResult != NULL);
         assert(pResult->lpBuffer == NULL && "Result already has data!");
         pResult->u.dwEventID = WFS_SRVE_IDC_MEDIADETECTED;
+        //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
         pResult->lpBuffer = xfsAlloc<DWORD>(WFS_IDC_CARDREADPOSITION);
         return *this;
     }

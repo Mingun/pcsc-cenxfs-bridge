@@ -20,7 +20,7 @@ class CardInserted {
 public:
     CardInserted(HSERVICE hService) : hService(hService) {}
     Result operator()() const {
-        WFMOutputTraceData("Send CardInserted event");
+        WFMOutputTraceData("Create CardInserted event");
         return Result(0, hService, WFS_SUCCESS).cardInserted();
     }
 };
@@ -30,18 +30,19 @@ class CardRemoved {
 public:
     CardRemoved(HSERVICE hService) : hService(hService) {}
     Result operator()() const {
-        WFMOutputTraceData("Send CardRemoved event");
+        WFMOutputTraceData("Create CardRemoved event");
         return Result(0, hService, WFS_SUCCESS).cardRemoved();
     }
 };
 /// Функтор, создающий результат уведомления о появлении нового устройства каждому заинтересованному слушателю.
 class DeviceDetected {
     HSERVICE hService;
-    SCARD_READERSTATE& state;
+    const SCARD_READERSTATE& state;
 public:
-    DeviceDetected(HSERVICE hService, SCARD_READERSTATE& state) : hService(hService), state(state) {}
+    DeviceDetected(HSERVICE hService, const SCARD_READERSTATE& state) : hService(hService), state(state) {}
     Result operator()() const {
-        WFMOutputTraceData("Send DeviceDetected event");
+        WFMOutputTraceData("Create DeviceDetected event");
+        //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
         WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
         // Имя физичеcкого устройства, чье состояние изменилось
         status->lpszPhysicalName = (LPSTR)XFSStr(state.szReader).begin();
@@ -158,8 +159,9 @@ std::pair<WFSIDCSTATUS*, Status> Service::getStatus() {
         // ATR получать не будем, тем не менее длину получить требуется, NULL недопустим.
         NULL, &atrLen
     );
-    log("SCardStatus: ", st);
+    log("SCardStatus", st);
 
+    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCSTATUS* lpStatus = xfsAlloc<WFSIDCSTATUS>();
     // Набор флагов, определяющих состояние устройства. Наше устройство всегда на связи,
     // т.к. в противном случае при открытии сессии с PC/SC драйвером будет ошибка.
@@ -178,6 +180,7 @@ std::pair<WFSIDCSTATUS*, Status> Service::getStatus() {
     return std::make_pair(lpStatus, st);
 }
 std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
+    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCAPS* lpCaps = xfsAlloc<WFSIDCCAPS>();
 
     // Получаем поддерживаемые картой протоколы.
@@ -229,6 +232,7 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID)));
 }
 std::pair<WFSIDCCARDDATA**, Status> Service::read() const {
+    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
     data->wDataSource = WFS_IDC_CHIP;
@@ -243,6 +247,7 @@ std::pair<WFSIDCCARDDATA**, Status> Service::read() const {
     log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, ?, ?)", st);
     // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
     // В первом элементе будет наш результат, во втором NULL -- признак конца массива.
+    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCARDDATA** result = xfsAllocArr<WFSIDCCARDDATA*>(2);
     result[0] = data;
     return std::make_pair(result, st);
@@ -250,6 +255,7 @@ std::pair<WFSIDCCARDDATA**, Status> Service::read() const {
 std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) const {
     assert(input != NULL);
 
+    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCHIPIO* result = xfsAlloc<WFSIDCCHIPIO>();
     result->wChipProtocol = input->wChipProtocol;
 
