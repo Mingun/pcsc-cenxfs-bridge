@@ -521,7 +521,6 @@ HRESULT SPI_API WFPUnloadService() {
     //     request to the service provider until the return is WFS_SUCCESS, or until a new session is
     //     started by an application with this service provider.
 
-    // Нас всегда можно выгрузить.
-    return WFS_SUCCESS;
+    return pcsc.isEmpty() ? WFS_SUCCESS : WFS_ERR_NOT_OK_TO_UNLOAD;
 }
 } // extern "C"

@@ -127,6 +127,9 @@ public:
     inline bool isValid(HSERVICE hService) {
         return services.find(hService) != services.end();
     }
+    /** @return true, если в менеджере не зарегистрировано ни одного сервиса. */
+    inline bool isEmpty() const { return services.empty(); }
+
     Service& create(HSERVICE hService, const Settings& settings);
     Service& get(HSERVICE hService);
     void remove(HSERVICE hService);
