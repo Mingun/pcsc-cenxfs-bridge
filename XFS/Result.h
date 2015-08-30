@@ -16,8 +16,10 @@
 // Определения для ридеров карт (Identification card unit (IDC)), для WFMAllocateBuffer, WFMOutputTraceData и WFSRESULT
 #include <XFSIDC.h>
 
-#include "Utils.h"
-#include "PCSCStatus.h"
+#include "Utils/CTString.h"
+#include "Utils/Enum.h"
+#include "PCSC/Status.h"
+#include "XFS/Memory.h"
 
 namespace XFS {
     class MsgType : public Enum<DWORD, MsgType> {
@@ -131,7 +133,7 @@ namespace XFS {
             assert(pResult->lpBuffer == NULL && "Result already has data!");
             pResult->u.dwEventID = WFS_SRVE_IDC_MEDIADETECTED;
             //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-            pResult->lpBuffer = xfsAlloc<DWORD>(WFS_IDC_CARDREADPOSITION);
+            pResult->lpBuffer = XFS::alloc<DWORD>(WFS_IDC_CARDREADPOSITION);
             return *this;
         }
         void send(HWND hWnd, DWORD messageType) {
@@ -143,7 +145,7 @@ namespace XFS {
         }
     private:
         inline void init(REQUESTID ReqID, HSERVICE hService, HRESULT result) {
-            pResult = xfsAlloc<WFSRESULT>();
+            pResult = XFS::alloc<WFSRESULT>();
             pResult->RequestID = ReqID;
             pResult->hService = hService;
             pResult->hResult = result;

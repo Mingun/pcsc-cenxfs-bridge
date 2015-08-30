@@ -16,8 +16,8 @@
 
 #include <vector>
 
-#include "PCSCStatus.h"
-#include "XFSResult.h"
+#include "PCSC/Status.h"
+#include "XFS/Result.h"
 #include "Manager.h"
 #include "Service.h"
 #include "Settings.h"

@@ -13,7 +13,7 @@
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
 
-#include "Utils.h"
+#include "Utils/Flags.h"
 
 namespace PCSC {
     /** Класс для представления состояния устройств. Позволяет преобразовать состояния в XFS

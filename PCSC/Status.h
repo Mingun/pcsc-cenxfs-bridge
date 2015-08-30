@@ -3,11 +3,10 @@
 
 #pragma once
 
-#include <iomanip>
-// Для HRESULT и DWORD
+// Для HRESULT и LONG
 #include <windef.h>
 
-#include "Utils.h"
+#include "Utils/Enum.h"
 
 namespace PCSC {
     /** Результат выполнения PC/SC функций. */

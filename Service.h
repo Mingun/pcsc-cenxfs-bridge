@@ -11,7 +11,7 @@
 #include <winscard.h>
 
 #include "EventSupport.h"
-#include "PCSCStatus.h"
+#include "PCSC/Status.h"
 #include "Settings.h"
 
 class Manager;

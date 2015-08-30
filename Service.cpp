@@ -1,9 +1,9 @@
 #include "Service.h"
 
-#include "Utils.h"
+#include "XFS/Memory.h"
 #include "Manager.h"
-#include "PCSCMediaStatus.h"
-#include "PCSCReaderState.h"
+#include "PCSC/MediaStatus.h"
+#include "PCSC/ReaderState.h"
 
 #include <string>
 #include <sstream>
@@ -43,9 +43,9 @@ public:
     XFS::Result operator()() const {
         WFMOutputTraceData("Create DeviceDetected event");
         //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-        WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
+        WFSDEVSTATUS* status = XFS::alloc<WFSDEVSTATUS>();
         // Имя физичеcкого устройства, чье состояние изменилось
-        status->lpszPhysicalName = (LPSTR)XFSStr(state.szReader).begin();
+        status->lpszPhysicalName = (LPSTR)XFS::Str(state.szReader).begin();
         // Рабочая станция, на которой запущен сервис.
         status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
         status->dwState = PCSC::ReaderState(state.dwEventState).translate();
@@ -162,7 +162,7 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
     log("SCardStatus", st);
 
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-    WFSIDCSTATUS* lpStatus = xfsAlloc<WFSIDCSTATUS>();
+    WFSIDCSTATUS* lpStatus = XFS::alloc<WFSIDCSTATUS>();
     // Набор флагов, определяющих состояние устройства. Наше устройство всегда на связи,
     // т.к. в противном случае при открытии сессии с PC/SC драйвером будет ошибка.
     lpStatus->fwDevice = WFS_IDC_DEVONLINE;
@@ -181,7 +181,7 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
 }
 std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-    WFSIDCCAPS* lpCaps = xfsAlloc<WFSIDCCAPS>();
+    WFSIDCCAPS* lpCaps = XFS::alloc<WFSIDCCAPS>();
 
     // Получаем поддерживаемые картой протоколы.
     DWORD types;
@@ -233,7 +233,7 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
 }
 std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-    WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
+    WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
     data->wDataSource = WFS_IDC_CHIP;
     //TODO: Статус прочитанных данных необходимо выставлять в соответствии со статусом,
@@ -242,13 +242,13 @@ std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
     // Получаем ATR (Answer To Reset). Сначала длину, потом сами данные.
     PCSC::Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, NULL, &data->ulDataLength);
     log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, NULL, ?)", st);
-    data->lpbData = xfsAllocArr<BYTE>(data->ulDataLength);
+    data->lpbData = XFS::allocArr<BYTE>(data->ulDataLength);
     st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
     log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, ?, ?)", st);
     // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
     // В первом элементе будет наш результат, во втором NULL -- признак конца массива.
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-    WFSIDCCARDDATA** result = xfsAllocArr<WFSIDCCARDDATA*>(2);
+    WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(2);
     result[0] = data;
     return std::make_pair(result, st);
 }
@@ -256,7 +256,7 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
     assert(input != NULL);
 
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-    WFSIDCCHIPIO* result = xfsAlloc<WFSIDCCHIPIO>();
+    WFSIDCCHIPIO* result = XFS::alloc<WFSIDCCHIPIO>();
     result->wChipProtocol = input->wChipProtocol;
 
     SCARD_IO_REQUEST ioRq = {0};//TODO: Получить протокол.

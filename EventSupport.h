@@ -3,6 +3,7 @@
 
 
 #include <set>
+#include <vector>
 // Для std::pair
 #include <utility>
 #include <cassert>
@@ -11,7 +12,7 @@
 // Для PostMessage
 #include <winuser.h>
 
-#include "XFSResult.h"
+#include "XFS/Result.h"
 
 class EventSubscriber {
     /// Окно, которое должно получать указанные события.

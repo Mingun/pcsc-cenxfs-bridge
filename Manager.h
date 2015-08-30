@@ -25,8 +25,8 @@
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
 
-#include "PCSCStatus.h"
-#include "XFSResult.h"
+#include "PCSC/Status.h"
+#include "XFS/Result.h"
 
 // Линкуемся с библиотекой реализации стандарта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")
