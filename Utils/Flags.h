@@ -50,7 +50,7 @@ protected:
         return result;
     }
 private:
-    inline Derived& derived() const { return *((Derived*)this); }
+    inline const Derived& derived() const { return *((Derived*)this); }
 };
 
 #endif // PCSC_CENXFS_BRIDGE_Utils_Flags_H

@@ -6,6 +6,7 @@
 // Для HRESULT и LONG
 #include <windef.h>
 
+#include "Utils/CTString.h"
 #include "Utils/Enum.h"
 
 namespace PCSC {
@@ -17,7 +18,7 @@ namespace PCSC {
 
         operator bool() const { return mValue == 0; }
 
-        inline CTString name() {
+        inline CTString name() const {
             static CTString null;
             static CTString names[] = {
                 CTString("SCARD_S_SUCCESS"                ), // NO_ERROR
@@ -116,7 +117,7 @@ namespace PCSC {
             return _Base::name(names, mValue & 0x0000FFFF);
         }
         /// Конвертирует код возврата функций PC/SC в код возврата функций XFS.
-        inline HRESULT translate() {
+        inline HRESULT translate() const {
             switch (mValue) {/*
                 case SCARD_S_SUCCESS:                 return WFS_SUCCESS;               // NO_ERROR
                 case SCARD_F_INTERNAL_ERROR:          return WFS_ERR_INTERNAL_ERROR;    // _HRESULT_TYPEDEF_(0x80100001L)

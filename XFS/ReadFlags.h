@@ -28,7 +28,7 @@ namespace XFS {
     public:
         ReadFlags(DWORD value) : value(value) {}
 
-        const std::vector<CTString> flagNames() {
+        const std::vector<CTString> flagNames() const {
             static CTString names[] = {
                 CTString("WFS_IDC_TRACK1"      ), // Track 1 of the magnetic stripe will be read.
                 CTString("WFS_IDC_TRACK2"      ), // Track 2 of the magnetic stripe will be read.

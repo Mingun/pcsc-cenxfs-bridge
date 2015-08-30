@@ -13,6 +13,7 @@
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
 
+#include "Utils/CTString.h"
 #include "Utils/Enum.h"
 
 namespace PCSC {
@@ -27,7 +28,7 @@ namespace PCSC {
     public:
         MediaStatus() : _Base(0) {}
         MediaStatus(DWORD value) : _Base(value) {}
-        WORD translateMedia() {
+        WORD translateMedia() const {
             switch (mValue) {
             // Карта отсутствует в устройстве
             case SCARD_ABSENT: {
@@ -56,7 +57,7 @@ namespace PCSC {
             }// switch (mValue)
             return 0;
         }
-        WORD translateChipPower() {
+        WORD translateChipPower() const {
             switch (mValue) {
             // Карта отсутствует в устройстве
             case SCARD_ABSENT: {
@@ -93,7 +94,7 @@ namespace PCSC {
             return 0;
         }
 
-        const CTString name() {
+        const CTString name() const {
             static CTString names[] = {
                 CTString("SCARD_UNKNOWN"   ), // 0x00000000
                 CTString("SCARD_ABSENT"    ), // 0x00000001

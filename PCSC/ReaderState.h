@@ -13,6 +13,7 @@
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
 
+#include "Utils/CTString.h"
 #include "Utils/Flags.h"
 
 namespace PCSC {
@@ -23,7 +24,7 @@ namespace PCSC {
         typedef Flags<DWORD, ReaderState> _Base;
     public:
         ReaderState(DWORD value) : _Base(value) {}
-        DWORD translate() {
+        DWORD translate() const {
             DWORD result = 0;
             // Считыватель должен быть проигнорирован
             if (mValue & SCARD_STATE_IGNORE) {

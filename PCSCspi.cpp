@@ -37,7 +37,7 @@
 
 template<std::size_t N1, std::size_t N2>
 void safecopy(char (&dst)[N1], const char (&src)[N2]) {
-    strncpy(dst, src, N1 < N2 ? N1 : N2);
+    std::strncpy(dst, src, N1 < N2 ? N1 : N2);
 }
 
 /** При загрузке DLL будут вызваны конструкторы всех глобальных объектов и установится
