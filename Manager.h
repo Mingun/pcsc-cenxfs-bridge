@@ -1,5 +1,5 @@
-#ifndef PCSC_CENXFS_BRIDGE_PCSC_H
-#define PCSC_CENXFS_BRIDGE_PCSC_H
+#ifndef PCSC_CENXFS_BRIDGE_Manager_H
+#define PCSC_CENXFS_BRIDGE_Manager_H
 
 #pragma once
 
@@ -67,7 +67,7 @@ public:
     */
     virtual bool match(const SCARD_READERSTATE& state) const = 0;
     inline void notify(HRESULT result, DWORD messageType) const {
-        Result(ReqID, hService, result).send(hWnd, messageType);
+        XFS::Result(ReqID, hService, result).send(hWnd, messageType);
     }
     /// Вызывается, если запрос был отменен вызовом WFPCancelAsyncRequest.
     inline void cancel() const {
@@ -84,7 +84,7 @@ class Settings;
     при выгрузке. Наиболее просто это делается, путем объявления глобальной переменной данного
     класса.
 */
-class PCSC {
+class Manager {
 public:
     /// Тип для отображения сервисов XFS на карты PC/SC.
     typedef std::map<HSERVICE, Service*> ServiceMap;
@@ -120,9 +120,9 @@ public:
     bool stopRequested;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
-    PCSC();
+    Manager();
     /// Закрывает соединение к менеджеру подсистемы PC/SC.
-    ~PCSC();
+    ~Manager();
     /** Проверяет, что указаный хендл сервиса является корректным хендлом карточки. */
     inline bool isValid(HSERVICE hService) {
         return services.find(hService) != services.end();
@@ -180,7 +180,7 @@ private:// Управление задачами
     */
     void processTimeouts(bc::steady_clock::time_point now);
 private:
-    static void log(std::string operation, Status st);
+    static void log(std::string operation, PCSC::Status st);
 };
 
-#endif // PCSC_CENXFS_BRIDGE_PCSC_H
+#endif // PCSC_CENXFS_BRIDGE_Manager_H

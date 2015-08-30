@@ -54,7 +54,7 @@ public:
         mask &= ~event;
         return mask == 0;
     }
-    void notify(DWORD event, Result result) const {
+    void notify(DWORD event, XFS::Result result) const {
         if (mask & event) {
             result.send(hWnd, event);
         }
@@ -109,7 +109,7 @@ public:
         subscribers.clear();
     }
     /** Уведомляет всех подписчиков об указанном событии.
-    @param resultGenerator Функция, которая должна вернуть результат типа Result.
+    @param resultGenerator Функция, которая должна вернуть результат типа XFS::Result.
            Данная функция вызывается для каждого подписчика на событие. 
     */
     template<class F>

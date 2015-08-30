@@ -1,23 +1,22 @@
-#include "PCSC.h"
+#include "Manager.h"
 
 #include <sstream>
 #include <cassert>
 
 #include "Service.h"
 #include "Settings.h"
-#include "PCSCReaderState.h"
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
-PCSC::PCSC() : stopRequested(false) {
+Manager::Manager() : stopRequested(false) {
     // Создаем контекст.
-    Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
+    PCSC::Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
     log("SCardEstablishContext", st);
     // Запускаем поток ожидания изменений от системы PC/SC -- добавление и удаление
     // считывателей и карточек.
-    waitChangesThread.reset(new boost::thread(&PCSC::waitChangesRun, this));
+    waitChangesThread.reset(new boost::thread(&Manager::waitChangesRun, this));
 }
 /// Закрывает соединение к менеджеру подсистемы PC/SC.
-PCSC::~PCSC() {
+Manager::~Manager() {
     // Запрашиваем остановку потока.
     stopRequested = true;
     // Сигнализируем о том, что необходимо прервать ожидание
@@ -29,22 +28,22 @@ PCSC::~PCSC() {
         delete it->second;
     }
     services.clear();
-    Status st = SCardReleaseContext(hContext);
+    PCSC::Status st = SCardReleaseContext(hContext);
     log("SCardReleaseContext", st);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service& PCSC::create(HSERVICE hService, const Settings& settings) {
+Service& Manager::create(HSERVICE hService, const Settings& settings) {
     Service* service = new Service(*this, hService, settings);
     services.insert(std::make_pair(hService, service));
     return *service;
 }
-Service& PCSC::get(HSERVICE hService) {
+Service& Manager::get(HSERVICE hService) {
     assert(isValid(hService));
     Service* service = services.find(hService)->second;
     assert(service != NULL);
     return *service;
 }
-void PCSC::remove(HSERVICE hService) {
+void Manager::remove(HSERVICE hService) {
     assert(isValid(hService));
     ServiceMap::iterator it = services.find(hService);
 
@@ -54,7 +53,7 @@ void PCSC::remove(HSERVICE hService) {
     services.erase(it);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-bool PCSC::addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
+bool Manager::addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
     ServiceMap::iterator it = services.find(hService);
     if (it == services.end()) {
         return false;
@@ -63,7 +62,7 @@ bool PCSC::addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
     it->second->add(hWndReg, dwEventClass);
     return true;
 }
-bool PCSC::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
+bool Manager::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
     ServiceMap::iterator it = services.find(hService);
     if (it == services.end()) {
         return false;
@@ -73,7 +72,7 @@ bool PCSC::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass)
     return true;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void PCSC::waitChangesRun() {
+void Manager::waitChangesRun() {
     WFMOutputTraceData("Reader changes dispatch thread runned");
     // Первоначально состояние неизвестное нам.
     DWORD readersState = SCARD_STATE_UNAWARE;
@@ -83,7 +82,7 @@ void PCSC::waitChangesRun() {
     }
     WFMOutputTraceData("Reader changes dispatch thread stopped");
 }
-DWORD PCSC::getTimeout() const {
+DWORD Manager::getTimeout() const {
     boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
 
     // Если имеются задачи, то ожидаем до их таймаута, в противном случае до бесконечности.
@@ -119,10 +118,10 @@ std::vector<const char*> getReaderNames(const std::vector<char>& readerNames) {
     WFMOutputTraceData((LPSTR)ss.str().c_str());
     return names;
 }
-DWORD PCSC::getReadersAndWaitChanges(DWORD readersState) {
+DWORD Manager::getReadersAndWaitChanges(DWORD readersState) {
     DWORD readersCount = 0;
     // Определяем доступные считыватели: сначало количество, затем сами считыватели.
-    Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
+    PCSC::Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
     log("SCardListReaders(get readers count)", st);
 
     // Получаем имена доступных считывателей. Все имена расположены в одной строке,
@@ -161,10 +160,10 @@ DWORD PCSC::getReadersAndWaitChanges(DWORD readersState) {
     // Возвращаем текущее состояние наблюдателя за считывателями.
     return readers[0].dwCurrentState;
 }
-bool PCSC::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
+bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
     // Ждем его до бесконечности.
-    Status st = SCardGetStatusChange(hContext, getTimeout(), &readers[0], (DWORD)readers.size());
+    PCSC::Status st = SCardGetStatusChange(hContext, getTimeout(), &readers[0], (DWORD)readers.size());
     log("SCardGetStatusChange", st);
     // Если изменение вызвано таймаутом операции, выкидываем из очереди ожидания все
     // задачи, чей таймаут уже наступил
@@ -189,7 +188,7 @@ bool PCSC::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     }
     return readersChanged;
 }
-void PCSC::notifyChanges(SCARD_READERSTATE& state) {
+void Manager::notifyChanges(SCARD_READERSTATE& state) {
     // Сначала уведомляем подписанных слушателей об изменениях, и только затем
     // пытаемся завершить задачи.
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
@@ -207,25 +206,25 @@ void PCSC::notifyChanges(SCARD_READERSTATE& state) {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void PCSC::addTask(const Task::Ptr& task) {
+void Manager::addTask(const Task::Ptr& task) {
     if (addTaskImpl(task)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
-        Status st = SCardCancel(hContext);
+        PCSC::Status st = SCardCancel(hContext);
         log("SCardCancel(addTask)", st);
     }
 }
-bool PCSC::cancelTask(HSERVICE hService, REQUESTID ReqID) {
+bool Manager::cancelTask(HSERVICE hService, REQUESTID ReqID) {
     if (cancelTaskImpl(hService, ReqID)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
-        Status st = SCardCancel(hContext);
+        PCSC::Status st = SCardCancel(hContext);
         log("SCardCancel(cancelTask)", st);
         return true;
     }
     return false;
 }
-bool PCSC::addTaskImpl(const Task::Ptr& task) {
+bool Manager::addTaskImpl(const Task::Ptr& task) {
     boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
 
     std::pair<TaskList::iterator, bool> r = tasks.insert(task);
@@ -237,7 +236,7 @@ bool PCSC::addTaskImpl(const Task::Ptr& task) {
     Index0& byDeadline = tasks.get<0>();
     return *byDeadline.begin() == task;
 }
-bool PCSC::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
+bool Manager::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
     boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
 
     // Получаем второй индекс -- по трекинговому номеру
@@ -252,7 +251,7 @@ bool PCSC::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
     byID.erase(it);
     return true;
 }
-void PCSC::processTimeouts(bc::steady_clock::time_point now) {
+void Manager::processTimeouts(bc::steady_clock::time_point now) {
     boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
 
     // Получаем первый индекс -- по времени дедлайна
@@ -274,7 +273,7 @@ void PCSC::processTimeouts(bc::steady_clock::time_point now) {
     byDeadline.erase(begin, it);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void PCSC::log(std::string operation, Status st) {
+void Manager::log(std::string operation, PCSC::Status st) {
     std::stringstream ss;
     ss << operation << ": " << st;
     WFMOutputTraceData((LPSTR)ss.str().c_str());

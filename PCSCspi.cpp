@@ -18,7 +18,7 @@
 
 #include "PCSCStatus.h"
 #include "XFSResult.h"
-#include "PCSC.h"
+#include "Manager.h"
 #include "Service.h"
 #include "Settings.h"
 
@@ -44,7 +44,7 @@ void safecopy(char (&dst)[N1], const char (&src)[N2]) {
     соединение с подсистемой PC/SC. При выгрузке DLL вызовутся деструкторы глобальных
     объектов и соединение автоматически закроется.
 */
-PCSC pcsc;
+Manager pcsc;
 extern "C" {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -105,7 +105,7 @@ HRESULT SPI_API WFPOpen(HSERVICE hService, LPSTR lpszLogicalName,
     }
 
     pcsc.create(hService, Settings(lpszLogicalName, dwTraceLevel));
-    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_OPEN_COMPLETE);
+    XFS::Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_OPEN_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED                The request was canceled by WFSCancelAsyncRequest.
@@ -143,7 +143,7 @@ HRESULT SPI_API WFPClose(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
     pcsc.remove(hService);
-    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_CLOSE_COMPLETE);
+    XFS::Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_CLOSE_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED The request was canceled by WFSCancelAsyncRequest.
@@ -175,7 +175,7 @@ HRESULT SPI_API WFPRegister(HSERVICE hService,  DWORD dwEventClass, HWND hWndReg
         return WFS_ERR_INVALID_HSERVICE;
     }
     // Добавление подписчика всегда успешно.
-    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
+    XFS::Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_INTERNAL_ERROR  An internal inconsistency or other unexpected error occurred in the XFS subsystem.
@@ -208,7 +208,7 @@ HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
         return WFS_ERR_INVALID_HSERVICE;
     }
     // Удаление подписчика всегда успешно.
-    Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
+    XFS::Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED The request was canceled by WFSCancelAsyncRequest.
 
@@ -237,8 +237,8 @@ HRESULT SPI_API WFPLock(HSERVICE hService, DWORD dwTimeOut, HWND hWnd, REQUESTID
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
 
-    Status st = pcsc.get(hService).lock();
-    Result(ReqID, hService, st).send(hWnd, WFS_LOCK_COMPLETE);
+    PCSC::Status st = pcsc.get(hService).lock();
+    XFS::Result(ReqID, hService, st).send(hWnd, WFS_LOCK_COMPLETE);
 
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
@@ -266,8 +266,8 @@ HRESULT SPI_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     if (!pcsc.isValid(hService))
         return WFS_ERR_INVALID_HSERVICE;
 
-    Status st = pcsc.get(hService).unlock();
-    Result(ReqID, hService, st).send(hWnd, WFS_UNLOCK_COMPLETE);
+    PCSC::Status st = pcsc.get(hService).unlock();
+    XFS::Result(ReqID, hService, st).send(hWnd, WFS_UNLOCK_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED        The request was canceled by WFSCancelAsyncRequest.
     // WFS_ERR_INTERNAL_ERROR  An internal inconsistency or other unexpected error occurred in the XFS subsystem.
@@ -301,14 +301,14 @@ HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
     // Для IDC могут запрашиваться только эти константы (WFS_INF_IDC_*)
     switch (dwCategory) {
         case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет
-            std::pair<WFSIDCSTATUS*, Status> status = pcsc.get(hService).getStatus();
+            std::pair<WFSIDCSTATUS*, PCSC::Status> status = pcsc.get(hService).getStatus();
             // Получение информации о считывателе всегда успешно.
-            Result(ReqID, hService, 0).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
+            XFS::Result(ReqID, hService, 0).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_CAPABILITIES: {// Дополнительных параметров нет
-            std::pair<WFSIDCCAPS*, Status> caps = pcsc.get(hService).getCaps();
-            Result(ReqID, hService, caps.second).data(caps.first).send(hWnd, WFS_GETINFO_COMPLETE);
+            std::pair<WFSIDCCAPS*, PCSC::Status> caps = pcsc.get(hService).getCaps();
+            XFS::Result(ReqID, hService, caps.second).data(caps.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_FORM_LIST:
@@ -424,8 +424,8 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
                 return WFS_ERR_INVALID_POINTER;
             }
             WFSIDCCHIPIO* data = (WFSIDCCHIPIO*)lpCmdData;
-            std::pair<WFSIDCCHIPIO*, Status> result = pcsc.get(hService).transmit(data);
-            Result(ReqID, hService, result.second).data(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+            std::pair<WFSIDCCHIPIO*, PCSC::Status> result = pcsc.get(hService).transmit(data);
+            XFS::Result(ReqID, hService, result.second).data(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
             return WFS_SUCCESS;
         }
         // Отключает питание чипа.

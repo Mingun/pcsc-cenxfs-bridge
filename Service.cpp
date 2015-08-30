@@ -1,7 +1,7 @@
 #include "Service.h"
 
 #include "Utils.h"
-#include "PCSC.h"
+#include "Manager.h"
 #include "PCSCMediaStatus.h"
 #include "PCSCReaderState.h"
 
@@ -19,9 +19,9 @@ class CardInserted {
     HSERVICE hService;
 public:
     CardInserted(HSERVICE hService) : hService(hService) {}
-    Result operator()() const {
+    XFS::Result operator()() const {
         WFMOutputTraceData("Create CardInserted event");
-        return Result(0, hService, WFS_SUCCESS).cardInserted();
+        return XFS::Result(0, hService, WFS_SUCCESS).cardInserted();
     }
 };
 /// Функтор, создающий результат уведомления о удалении карты каждому заинтересованному слушателю.
@@ -29,9 +29,9 @@ class CardRemoved {
     HSERVICE hService;
 public:
     CardRemoved(HSERVICE hService) : hService(hService) {}
-    Result operator()() const {
+    XFS::Result operator()() const {
         WFMOutputTraceData("Create CardRemoved event");
-        return Result(0, hService, WFS_SUCCESS).cardRemoved();
+        return XFS::Result(0, hService, WFS_SUCCESS).cardRemoved();
     }
 };
 /// Функтор, создающий результат уведомления о появлении нового устройства каждому заинтересованному слушателю.
@@ -40,7 +40,7 @@ class DeviceDetected {
     const SCARD_READERSTATE& state;
 public:
     DeviceDetected(HSERVICE hService, const SCARD_READERSTATE& state) : hService(hService), state(state) {}
-    Result operator()() const {
+    XFS::Result operator()() const {
         WFMOutputTraceData("Create DeviceDetected event");
         //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
         WFSDEVSTATUS* status = xfsAlloc<WFSDEVSTATUS>();
@@ -48,8 +48,8 @@ public:
         status->lpszPhysicalName = (LPSTR)XFSStr(state.szReader).begin();
         // Рабочая станция, на которой запущен сервис.
         status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
-        status->dwState = ReaderState(state.dwEventState).translate();
-        return Result(0, hService, WFS_SUCCESS).data(status);
+        status->dwState = PCSC::ReaderState(state.dwEventState).translate();
+        return XFS::Result(0, hService, WFS_SUCCESS).data(status);
     }
 };
 
@@ -84,7 +84,7 @@ public:
 };*/
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service::Service(PCSC& pcsc, HSERVICE hService, const Settings& settings)
+Service::Service(Manager& pcsc, HSERVICE hService, const Settings& settings)
     : pcsc(pcsc)
     , hService(hService)
     , hCard(0)
@@ -100,9 +100,9 @@ Service::~Service() {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Status Service::open(SCARDCONTEXT hContext) {
+PCSC::Status Service::open(SCARDCONTEXT hContext) {
     assert(hCard == 0 && "Must open only one card at one service");
-    Status st = SCardConnect(hContext, settings.readerName.c_str(), SCARD_SHARE_SHARED,
+    PCSC::Status st = SCardConnect(hContext, settings.readerName.c_str(), SCARD_SHARE_SHARED,
         // У нас нет предпочитаемого протокола, работаем с тем, что дают
         SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
         // Получаем хендл карты и выбранный протокол.
@@ -111,24 +111,24 @@ Status Service::open(SCARDCONTEXT hContext) {
     log("SCardConnect", st);
     return st;
 }
-Status Service::close() {
+PCSC::Status Service::close() {
     assert(hCard != 0 && "Attempt disconnect from non-connected card");
     // При закрытии соединения ничего не делаем с карточкой, оставляем ее в считывателе.
-    Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+    PCSC::Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
     log("SCardDisconnect", st);
     hCard = 0;
     return st;
 }
 
-Status Service::lock() {
-    Status st = SCardBeginTransaction(hCard);
+PCSC::Status Service::lock() {
+    PCSC::Status st = SCardBeginTransaction(hCard);
     log("SCardBeginTransaction", st);
 
     return st;
 }
-Status Service::unlock() {
+PCSC::Status Service::unlock() {
     // Заканчиваем транзакцию, ничего не делаем с картой.
-    Status st = SCardEndTransaction(hCard, SCARD_LEAVE_CARD);
+    PCSC::Status st = SCardEndTransaction(hCard, SCARD_LEAVE_CARD);
     log("SCardEndTransaction", st);
 
     return st;
@@ -146,12 +146,12 @@ void Service::notify(SCARD_READERSTATE& state) const {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-std::pair<WFSIDCSTATUS*, Status> Service::getStatus() {
+std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
     // Состояние считывателя.
-    MediaStatus state;
+    PCSC::MediaStatus state;
     DWORD nameLen;
     DWORD atrLen;
-    Status st = SCardStatus(hCard,
+    PCSC::Status st = SCardStatus(hCard,
         // Имя получать не будем, тем не менее длину получить требуется, NULL недопустим.
         NULL, &nameLen,
         // Небольшой хак допустим, у нас прозрачная обертка, ничего лишнего.
@@ -179,14 +179,14 @@ std::pair<WFSIDCSTATUS*, Status> Service::getStatus() {
     //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
     return std::make_pair(lpStatus, st);
 }
-std::pair<WFSIDCCAPS*, Status> Service::getCaps() const {
+std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCAPS* lpCaps = xfsAlloc<WFSIDCCAPS>();
 
     // Получаем поддерживаемые картой протоколы.
     DWORD types;
     DWORD len = sizeof(DWORD);
-    Status st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (BYTE*)&types, &len);
+    PCSC::Status st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (BYTE*)&types, &len);
     log("SCardGetAttrib(SCARD_ATTR_PROTOCOL_TYPES)", st);
 
     // Устройство является считывателем карт.
@@ -231,7 +231,7 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     bc::steady_clock::time_point now = bc::steady_clock::now();
     pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID)));
 }
-std::pair<WFSIDCCARDDATA**, Status> Service::read() const {
+std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCARDDATA* data = xfsAlloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
@@ -240,7 +240,7 @@ std::pair<WFSIDCCARDDATA**, Status> Service::read() const {
     // который вернула SCardGetAttrib.
     data->wStatus = WFS_IDC_DATAOK;
     // Получаем ATR (Answer To Reset). Сначала длину, потом сами данные.
-    Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, NULL, &data->ulDataLength);
+    PCSC::Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, NULL, &data->ulDataLength);
     log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, NULL, ?)", st);
     data->lpbData = xfsAllocArr<BYTE>(data->ulDataLength);
     st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
@@ -252,7 +252,7 @@ std::pair<WFSIDCCARDDATA**, Status> Service::read() const {
     result[0] = data;
     return std::make_pair(result, st);
 }
-std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) const {
+std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) const {
     assert(input != NULL);
 
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
@@ -260,7 +260,7 @@ std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) const {
     result->wChipProtocol = input->wChipProtocol;
 
     SCARD_IO_REQUEST ioRq = {0};//TODO: Получить протокол.
-    Status st = SCardTransmit(hCard,
+    PCSC::Status st = SCardTransmit(hCard,
         &ioRq, input->lpbChipData, input->ulChipDataLength,
         NULL, result->lpbChipData, &result->ulChipDataLength
     );
@@ -269,7 +269,7 @@ std::pair<WFSIDCCHIPIO*, Status> Service::transmit(WFSIDCCHIPIO* input) const {
     return std::make_pair(result, st);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void Service::log(std::string operation, Status st) const {
+void Service::log(std::string operation, PCSC::Status st) const {
     std::stringstream ss;
     ss << operation << " card reader '" << settings.readerName << "': " << st;
     WFMOutputTraceData((LPSTR)ss.str().c_str());
