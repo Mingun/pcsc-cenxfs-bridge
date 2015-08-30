@@ -20,13 +20,10 @@ namespace XFS {
     /** Класс для представления состояния устройств. Позволяет преобразовать состояния в XFS
         состояния и распечатать набор текущих флагов.
     */
-    class ReadFlags {
-        DWORD value;
-        
-        template<class OS>
-        friend OS& operator<<(OS& os, ReadFlags s);
+    class ReadFlags : public Flags<DWORD, ReadFlags> {
+        typedef Flags<DWORD, ReadFlags> _Base;
     public:
-        ReadFlags(DWORD value) : value(value) {}
+        ReadFlags(DWORD value) : _Base(value) {}
 
         const std::vector<CTString> flagNames() const {
             static CTString names[] = {
@@ -43,31 +40,15 @@ namespace XFS {
             const std::size_t size = sizeof(names)/sizeof(names[0]);
             std::vector<CTString> result(size);
             int i = -1;
-            result[++i] = (value & WFS_IDC_TRACK1      ) ? names[i] : CTString();
-            result[++i] = (value & WFS_IDC_TRACK2      ) ? names[i] : CTString();
-            result[++i] = (value & WFS_IDC_TRACK3      ) ? names[i] : CTString();
-            result[++i] = (value & WFS_IDC_CHIP        ) ? names[i] : CTString();
-            result[++i] = (value & WFS_IDC_SECURITY    ) ? names[i] : CTString();
-            result[++i] = (value & WFS_IDC_FLUXINACTIVE) ? names[i] : CTString();
-            result[++i] = (value & WFS_IDC_TRACK_WM    ) ? names[i] : CTString();
+            result[++i] = (value() & WFS_IDC_TRACK1      ) ? names[i] : CTString();
+            result[++i] = (value() & WFS_IDC_TRACK2      ) ? names[i] : CTString();
+            result[++i] = (value() & WFS_IDC_TRACK3      ) ? names[i] : CTString();
+            result[++i] = (value() & WFS_IDC_CHIP        ) ? names[i] : CTString();
+            result[++i] = (value() & WFS_IDC_SECURITY    ) ? names[i] : CTString();
+            result[++i] = (value() & WFS_IDC_FLUXINACTIVE) ? names[i] : CTString();
+            result[++i] = (value() & WFS_IDC_TRACK_WM    ) ? names[i] : CTString();
             return result;
         }
     };
-    template<class OS>
-    inline OS& operator<<(OS& os, ReadFlags s) {
-        os << "0x" << std::hex << std::setfill('0') << std::setw(2*sizeof(s.value)) << '(';
-        std::vector<CTString> names = s.flagNames();
-        bool first = true;
-        for (std::vector<CTString>::const_iterator it = names.begin(); it != names.end(); ++it) {
-            if (!it->isValid())
-                continue;
-            if (!first) {
-                os << ", ";
-            }
-            os << *it;
-            first = false;
-        }
-        return os << ')';
-    }
 } // namespace XFS
 #endif // PCSC_CENXFS_BRIDGE_XFS_ReadFlags_H
