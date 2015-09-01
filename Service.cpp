@@ -4,6 +4,7 @@
 #include "Manager.h"
 #include "PCSC/MediaStatus.h"
 #include "PCSC/ReaderState.h"
+#include "PCSC/Events.h"
 
 #include <string>
 #include <sstream>
@@ -13,45 +14,6 @@
 
 // CEN/XFS API -- Для WFMOutputTraceData
 #include <xfsadmin.h>
-
-/// Функтор, создающий результат уведомления о вставке карты каждому заинтересованному слушателю.
-class CardInserted {
-    HSERVICE hService;
-public:
-    CardInserted(HSERVICE hService) : hService(hService) {}
-    XFS::Result operator()() const {
-        WFMOutputTraceData("Create CardInserted event");
-        return XFS::Result(0, hService, WFS_SUCCESS).cardInserted();
-    }
-};
-/// Функтор, создающий результат уведомления о удалении карты каждому заинтересованному слушателю.
-class CardRemoved {
-    HSERVICE hService;
-public:
-    CardRemoved(HSERVICE hService) : hService(hService) {}
-    XFS::Result operator()() const {
-        WFMOutputTraceData("Create CardRemoved event");
-        return XFS::Result(0, hService, WFS_SUCCESS).cardRemoved();
-    }
-};
-/// Функтор, создающий результат уведомления о появлении нового устройства каждому заинтересованному слушателю.
-class DeviceDetected {
-    HSERVICE hService;
-    const SCARD_READERSTATE& state;
-public:
-    DeviceDetected(HSERVICE hService, const SCARD_READERSTATE& state) : hService(hService), state(state) {}
-    XFS::Result operator()() const {
-        WFMOutputTraceData("Create DeviceDetected event");
-        //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-        WFSDEVSTATUS* status = XFS::alloc<WFSDEVSTATUS>();
-        // Имя физичеcкого устройства, чье состояние изменилось
-        status->lpszPhysicalName = (LPSTR)XFS::Str(state.szReader).begin();
-        // Рабочая станция, на которой запущен сервис.
-        status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
-        status->dwState = PCSC::ReaderState(state.dwEventState).translate();
-        return XFS::Result(0, hService, WFS_SUCCESS).data(status);
-    }
-};
 
 class CardReadTask : public Task {
 public:
@@ -140,13 +102,13 @@ PCSC::Status Service::unlock() {
 /// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
 void Service::notify(const SCARD_READERSTATE& state) const {
     /*if (state.dwEventState & SCARD_STATE_) {
-        EventNotifier::notify(WFS_SYSTEM_EVENT, DeviceDetected(hService, state));
+        EventNotifier::notify(WFS_SYSTEM_EVENT, PCSC::DeviceDetected(*this, state));
     }*/
     if (state.dwEventState & SCARD_STATE_EMPTY) {
-        EventNotifier::notify(WFS_SERVICE_EVENT, CardRemoved(hService));
+        EventNotifier::notify(WFS_SERVICE_EVENT, PCSC::CardRemoved(*this));
     }
     if (state.dwEventState & SCARD_STATE_PRESENT) {
-        EventNotifier::notify(WFS_EXECUTE_EVENT, CardInserted(hService));
+        EventNotifier::notify(WFS_EXECUTE_EVENT, PCSC::CardInserted(*this));
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
