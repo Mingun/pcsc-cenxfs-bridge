@@ -12,6 +12,8 @@
 
 template<typename T, class Derived>
 class Flags {
+public:
+    typedef T type;
 protected:
     T mValue;
     template<class OS>

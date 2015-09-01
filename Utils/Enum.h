@@ -15,6 +15,8 @@
 */
 template<typename T, class Derived>
 class Enum {
+public:
+    typedef T type;
 protected:
     T mValue;
     template<class OS>
