@@ -85,7 +85,7 @@ namespace XFS {
         }
     public:// Заполнение результатов команд WFPExecute
         /// Прикрепляет к результату указанные данные возможностей устройства.
-        inline Result& data(WFSIDCCARDDATA* data) {
+        inline Result& data(WFSIDCCARDDATA** data) {
             assert(pResult != NULL);
             assert(pResult->lpBuffer == NULL && "Result already has data!");
             pResult->u.dwCommandCode = WFS_CMD_IDC_READ_RAW_DATA;

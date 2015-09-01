@@ -138,7 +138,7 @@ PCSC::Status Service::unlock() {
     return st;
 }
 /// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
-void Service::notify(SCARD_READERSTATE& state) const {
+void Service::notify(const SCARD_READERSTATE& state) const {
     /*if (state.dwEventState & SCARD_STATE_) {
         EventNotifier::notify(WFS_SYSTEM_EVENT, DeviceDetected(hService, state));
     }*/

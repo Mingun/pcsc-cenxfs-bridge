@@ -175,7 +175,7 @@ bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     }
     return readersChanged;
 }
-void Manager::notifyChanges(SCARD_READERSTATE& state) {
+void Manager::notifyChanges(const SCARD_READERSTATE& state) {
     // Сначала уведомляем подписанных слушателей об изменениях, и только затем
     // пытаемся завершить задачи.
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
