@@ -82,19 +82,6 @@ void Manager::waitChangesRun() {
     }
     WFMOutputTraceData("Reader changes dispatch thread stopped");
 }
-DWORD Manager::getTimeout() const {
-    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
-
-    // Если имеются задачи, то ожидаем до их таймаута, в противном случае до бесконечности.
-    if (!tasks.empty()) {
-        // Время до ближайшего таймаута.
-        bc::steady_clock::duration dur = (*tasks.begin())->deadline - bc::steady_clock::now();
-        // Преобразуем его в миллисекунды
-        return (DWORD)bc::duration_cast<bc::milliseconds>(dur).count();
-    }
-    return INFINITE;
-}
-
 /// Получаем список имен считывателей из строки со всеми именами, разделенными символом '\0'.
 std::vector<const char*> getReaderNames(const std::vector<char>& readerNames) {
     std::stringstream ss;
@@ -163,12 +150,12 @@ DWORD Manager::getReadersAndWaitChanges(DWORD readersState) {
 bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
     // Ждем его до бесконечности.
-    PCSC::Status st = SCardGetStatusChange(hContext, getTimeout(), &readers[0], (DWORD)readers.size());
+    PCSC::Status st = SCardGetStatusChange(hContext, tasks.getTimeout(), &readers[0], (DWORD)readers.size());
     log("SCardGetStatusChange", st);
     // Если изменение вызвано таймаутом операции, выкидываем из очереди ожидания все
     // задачи, чей таймаут уже наступил
     if (st.value() == SCARD_E_TIMEOUT) {
-        processTimeouts(bc::steady_clock::now());
+        tasks.processTimeouts(bc::steady_clock::now());
     }
     bool readersChanged = false;
     bool first = true;
@@ -195,19 +182,11 @@ void Manager::notifyChanges(SCARD_READERSTATE& state) {
         it->second->notify(state);
     }
 
-    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
-    for (TaskList::iterator it = tasks.begin(); it != tasks.end();) {
-        // Если задача ожидала этого события, то удаляем ее из списка.
-        if ((*it)->match(state)) {
-            it = tasks.erase(it);
-            continue;
-        }
-        ++it;
-    }
+    tasks.notifyChanges(state);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Manager::addTask(const Task::Ptr& task) {
-    if (addTaskImpl(task)) {
+    if (tasks.addTask(task)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
         PCSC::Status st = SCardCancel(hContext);
@@ -215,7 +194,7 @@ void Manager::addTask(const Task::Ptr& task) {
     }
 }
 bool Manager::cancelTask(HSERVICE hService, REQUESTID ReqID) {
-    if (cancelTaskImpl(hService, ReqID)) {
+    if (tasks.cancelTask(hService, ReqID)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
         PCSC::Status st = SCardCancel(hContext);
@@ -223,54 +202,6 @@ bool Manager::cancelTask(HSERVICE hService, REQUESTID ReqID) {
         return true;
     }
     return false;
-}
-bool Manager::addTaskImpl(const Task::Ptr& task) {
-    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
-
-    std::pair<TaskList::iterator, bool> r = tasks.insert(task);
-    // Вставляться должны уникальные по ReqID элементы.
-    assert(r.second == false);
-    assert(!tasks.empty());
-    // Получаем первый индекс -- по времени дедлайна
-    typedef TaskList::nth_index<0>::type Index0;
-    Index0& byDeadline = tasks.get<0>();
-    return *byDeadline.begin() == task;
-}
-bool Manager::cancelTaskImpl(HSERVICE hService, REQUESTID ReqID) {
-    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
-
-    // Получаем второй индекс -- по трекинговому номеру
-    typedef TaskList::nth_index<1>::type Index1;
-    Index1& byID = tasks.get<1>();
-    Index1::iterator it = byID.find(boost::make_tuple(hService, ReqID));
-    if (it == byID.end()) {
-        return false;
-    }
-    // Сигнализируем зарегистрированным слушателем о том, что задача отменена.
-    (*it)->cancel();
-    byID.erase(it);
-    return true;
-}
-void Manager::processTimeouts(bc::steady_clock::time_point now) {
-    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
-
-    // Получаем первый индекс -- по времени дедлайна
-    typedef TaskList::nth_index<0>::type Index0;
-    Index0& byDeadline = tasks.get<0>();
-    Index0::iterator begin = byDeadline.begin();
-    Index0::iterator it = begin;
-    for (; it != byDeadline.end(); ++it) {
-        // Извлекаем все задачи, чей таймаут наступил. Так как все задачи упорядочены по
-        // времени таймаута (чем раньше таймаут, тем ближе к голове очереди), то первая
-        // задача, таймаут которой еще не наступил, прерывает цепочку таймаутов.
-        if ((*it)->deadline > now) {
-            break;
-        }
-        // Сигнализируем зарегистрированным слушателем о том, что произошел таймаут.
-        (*it)->timeout();
-    }
-    // Удаляем завершенные таймаутом задачи.
-    byDeadline.erase(begin, it);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Manager::log(std::string operation, PCSC::Status st) {

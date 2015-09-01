@@ -11,13 +11,6 @@
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
 
-// Контейнер для хранения задач на чтение карточки.
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/composite_key.hpp>
-#include <boost/multi_index/identity.hpp>
-#include <boost/multi_index/member.hpp>
-
 #include <boost/chrono/chrono.hpp>
 
 // PC/CS API
@@ -27,56 +20,11 @@
 
 #include "PCSC/Status.h"
 #include "XFS/Result.h"
+#include "Task.h"
 
 // Линкуемся с библиотекой реализации стандарта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")
 
-namespace mi = boost::multi_index;
-namespace bc = boost::chrono;
-
-class Task {
-public:
-    /// Время, когда истекает таймаут для данной задачи.
-    bc::steady_clock::time_point deadline;
-    /// Сервис, который создал эту задачу.
-    HSERVICE hService;
-    /// Окно, которое получит уведомление о завершении задачи.
-    HWND hWnd;
-    /// Трекинговый номер данной задачи, который будет предоставлен в уведомлении окну `hWnd`.
-    /// Должен быть уникален для каждой задачи.
-    REQUESTID ReqID;
-public:
-    typedef boost::shared_ptr<Task> Ptr;
-public:
-    Task(bc::steady_clock::time_point deadline, HSERVICE hService, HWND hWnd, REQUESTID ReqID)
-        : deadline(deadline), hService(hService), hWnd(hWnd), ReqID(ReqID) {}
-    inline bool operator<(const Task& other) const {
-        return deadline < other.deadline;
-    }
-    inline bool operator==(const Task& other) const {
-        return hService == other.hService && ReqID == other.ReqID;
-    }
-public:
-    /** Проверяет, является ли указанное событие тем, что ожидает данная задача.
-        Если функция вернет `true`, та данная задача будет считаться завершенной
-        и будет исключена ис списка зарегистрированных задач. Если зачате требуется
-        выполнить какие-то действия в случае успешного завершения, это надо сделать
-        здесь.
-    @param state
-        Данные изменившегося состояния.
-    */
-    virtual bool match(const SCARD_READERSTATE& state) const = 0;
-    inline void notify(HRESULT result, DWORD messageType) const {
-        XFS::Result(ReqID, hService, result).send(hWnd, messageType);
-    }
-    /// Вызывается, если запрос был отменен вызовом WFPCancelAsyncRequest.
-    inline void cancel() const {
-        notify(WFS_ERR_CANCELED, WFS_EXECUTE_COMPLETE);
-    }
-    inline void timeout() const {
-        notify(WFS_ERR_TIMEOUT, WFS_EXECUTE_COMPLETE);
-    }
-};
 class Service;
 class Settings;
 /** Класс, в конструкторе инициализирующий подсистему PC/SC, а в деструкторе закрывающий ее.
@@ -88,36 +36,18 @@ class Manager {
 public:
     /// Тип для отображения сервисов XFS на карты PC/SC.
     typedef std::map<HSERVICE, Service*> ServiceMap;
-    typedef mi::multi_index_container<
-        Task::Ptr,
-        mi::indexed_by<
-            // Сортировка по CardWaitTask::operator< -- по времени дедлайна, для выбора
-            // задач, чей таймаут подошел.
-            mi::ordered_non_unique<mi::identity<Task> >,
-            // Сортировка по less<REQUESTID> по ReqID -- для удаления отмененных задач,
-            // но ReqID уникален в пределах сервиса.
-            mi::ordered_unique<mi::composite_key<
-                Task,
-                mi::member<Task, HSERVICE , &Task::hService>,
-                mi::member<Task, REQUESTID, &Task::ReqID>
-            > >
-        >
-    > TaskList;
 public:
     /// Контекст подсистемы PC/SC.
     SCARDCONTEXT hContext;
     /// Список карт, открытых для взаимодействия с системой XFS.
     ServiceMap services;
-    /// Список задач, упорядоченый по возрастанию времени дедлайна.
-    /// Чем раньше дедлайн, тем ближе задача к голове списка.
-    TaskList tasks;
-    /// Мьютекс для защиты `tasks` от одновременной модификации.
-    mutable boost::recursive_mutex tasksMutex;
     /// Поток для выполнения ожидания изменения в оборудовании.
     boost::shared_ptr<boost::thread> waitChangesThread;
     /// Флаг, выставляемый основным потоком, когда возникнет необходимость остановить
     ///`waitChangesThread`.
     bool stopRequested;
+
+    TaskContainer tasks;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
     Manager();
@@ -133,6 +63,7 @@ public:
     Service& create(HSERVICE hService, const Settings& settings);
     Service& get(HSERVICE hService);
     void remove(HSERVICE hService);
+public:// Управление задачами
     void addTask(const Task::Ptr& task);
     /** Отменяет задачу с указанный трекинговым номером, возвращает `true`, если задача с таким
         номером имелась в списке, иначе `false`.
@@ -153,8 +84,6 @@ public:// Подписка на события и генерация событ�
     bool addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
     bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
 private:
-    /// Вычисляет таймаут до ближайшего дедлайна потокобезопасным способом.
-    DWORD getTimeout() const;
     /// Блокирует выполнение, пока поток не будет остановлен. Необходимо
     /// запускать из своего потока.
     void waitChangesRun();
@@ -167,18 +96,7 @@ private:
     @return `true`, если произошли изменения в количестве считывателей, `false` иначе.
     */
     bool waitChanges(std::vector<SCARD_READERSTATE>& readers);
-    void notifyChanges(SCARD_READERSTATE& state);
-private:// Управление задачами
-    /// Добавляет задачу в очередь, возвращает `true`, если задача первая в очереди
-    /// и дедлайн необходимо скорректировать, чтобы не пропустить дедлайн данной задачи.
-    bool addTaskImpl(const Task::Ptr& task);
-    bool cancelTaskImpl(HSERVICE hService, REQUESTID ReqID);
-    /** Удаляет из списка все задачи, чье время дедлайна раньше или равно указанному
-        и сигнализирует зарегистрированным в задаче слушателем о наступлении таймаута.
-    @param now
-        Время, для которого рассматривается, наступил таймаут или нет.
-    */
-    void processTimeouts(bc::steady_clock::time_point now);
+    void notifyChanges(const SCARD_READERSTATE& state);
 private:
     static void log(std::string operation, PCSC::Status st);
 };

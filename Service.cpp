@@ -55,12 +55,16 @@ public:
 
 class CardReadTask : public Task {
 public:
-    CardReadTask(bc::steady_clock::time_point deadline, HSERVICE hService, HWND hWnd, REQUESTID ReqID)
-        : Task(deadline, hService, hWnd, ReqID) {}
+    CardReadTask(bc::steady_clock::time_point deadline, const Service& service, HWND hWnd, REQUESTID ReqID)
+        : Task(deadline, service, hWnd, ReqID) {}
     virtual bool match(const SCARD_READERSTATE& state) const {
         if (state.dwEventState & SCARD_STATE_PRESENT) {
+            // TODO: Объединить open с чтением ATR и вызват
+            // std::pair<WFSIDCCARDDATA**, PCSC::Status> r = mService.open();
+            // std::pair<WFSIDCCARDDATA**, PCSC::Status> r = mService.read();
             // Уведомляем поставщика задачи, что она выполнена.
-            notify(WFS_SUCCESS, WFS_EXECUTE_COMPLETE);
+            // XFS::Result(ReqID, serviceHandle(), r.second).data(r.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+            // Задача обработана, можно удалять из списка.
             return true;
         }
         return false;
@@ -229,7 +233,7 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
 void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
     namespace bc = boost::chrono;
     bc::steady_clock::time_point now = bc::steady_clock::now();
-    pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), hService, hWnd, ReqID)));
+    pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID)));
 }
 std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
