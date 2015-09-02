@@ -15,10 +15,11 @@ bool TaskContainer::addTask(const Task::Ptr& task) {
 
     std::pair<TaskList::iterator, bool> r = tasks.insert(task);
     // Вставляться должны уникальные по ReqID элементы.
-    assert(r.second == false);
-    assert(!tasks.empty());
+    assert(r.second == true && "[TaskContainer::addTask] Adding task with existing <ServiceHandle, ReqID>");
+    assert(!tasks.empty() &&  "[TaskContainer::addTask] Task insertion was not performed");
     // Получаем первый индекс -- по времени дедлайна
     typedef TaskList::nth_index<0>::type Index0;
+
     Index0& byDeadline = tasks.get<0>();
     return *byDeadline.begin() == task;
 }
