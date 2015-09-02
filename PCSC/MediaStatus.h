@@ -53,7 +53,10 @@ namespace PCSC {
             // Карта была сброшена (reset) и ожидает согласование PTS.
             case SCARD_NEGOTIABLE:
             // Карта была сброшена (reset) и установлен specific протокол общения.
-            case SCARD_SPECIFIC: break;
+            case SCARD_SPECIFIC: {
+                //TODO: Возможно, стоит использовать WFS_IDC_MEDIALATCHED или даже ввести настройку
+                return WFS_IDC_MEDIAPRESENT;
+            }
             }// switch (mValue)
             return 0;
         }
