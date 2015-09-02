@@ -27,26 +27,26 @@ namespace XFS {
 
         const std::vector<CTString> flagNames() const {
             static CTString names[] = {
-                CTString("WFS_IDC_TRACK1"      ), // Track 1 of the magnetic stripe will be read.
-                CTString("WFS_IDC_TRACK2"      ), // Track 2 of the magnetic stripe will be read.
-                CTString("WFS_IDC_TRACK3"      ), // Track 3 of the magnetic stripe will be read.
-                CTString("WFS_IDC_CHIP"        ), // The chip will be read.
-                CTString("WFS_IDC_SECURITY"    ), // A security check will be performed.
+                // CTString("WFS_IDC_NOTSUPP"     ), // 0x0000
+                CTString("WFS_IDC_TRACK1"      ), // 0x0001 Track 1 of the magnetic stripe will be read.
+                CTString("WFS_IDC_TRACK2"      ), // 0x0002 Track 2 of the magnetic stripe will be read.
+                CTString("WFS_IDC_TRACK3"      ), // 0x0004 Track 3 of the magnetic stripe will be read.
+                CTString("WFS_IDC_CHIP"        ), // 0x0008 The chip will be read.
+                CTString("WFS_IDC_SECURITY"    ), // 0x0010 A security check will be performed.
                 // If the IDC Flux Sensor is programmable it will be disabled in order
                 // to allow chip data to be read on cards which have no magnetic stripes.
-                CTString("WFS_IDC_FLUXINACTIVE"),
-                CTString("WFS_IDC_TRACK_WM"    ),
+                CTString("WFS_IDC_FLUXINACTIVE"), // 0x0020
+                CTString("WFS_IDC_TRACK_WM"    ), // 0x8000
             };
-            const std::size_t size = sizeof(names)/sizeof(names[0]);
-            std::vector<CTString> result(size);
+            std::vector<CTString> result;
             int i = -1;
-            result[++i] = (value() & WFS_IDC_TRACK1      ) ? names[i] : CTString();
-            result[++i] = (value() & WFS_IDC_TRACK2      ) ? names[i] : CTString();
-            result[++i] = (value() & WFS_IDC_TRACK3      ) ? names[i] : CTString();
-            result[++i] = (value() & WFS_IDC_CHIP        ) ? names[i] : CTString();
-            result[++i] = (value() & WFS_IDC_SECURITY    ) ? names[i] : CTString();
-            result[++i] = (value() & WFS_IDC_FLUXINACTIVE) ? names[i] : CTString();
-            result[++i] = (value() & WFS_IDC_TRACK_WM    ) ? names[i] : CTString();
+            ++i; if (value() & WFS_IDC_TRACK1      ) result.push_back(names[i]);
+            ++i; if (value() & WFS_IDC_TRACK2      ) result.push_back(names[i]);
+            ++i; if (value() & WFS_IDC_TRACK3      ) result.push_back(names[i]);
+            ++i; if (value() & WFS_IDC_CHIP        ) result.push_back(names[i]);
+            ++i; if (value() & WFS_IDC_SECURITY    ) result.push_back(names[i]);
+            ++i; if (value() & WFS_IDC_FLUXINACTIVE) result.push_back(names[i]);
+            ++i; if (value() & WFS_IDC_TRACK_WM    ) result.push_back(names[i]);
             return result;
         }
     };
