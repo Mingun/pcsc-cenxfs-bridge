@@ -19,6 +19,7 @@
 #include "Utils/CTString.h"
 #include "Utils/Enum.h"
 #include "PCSC/Status.h"
+#include "XFS/Status.h"
 #include "XFS/Memory.h"
 
 namespace XFS {
@@ -139,7 +140,8 @@ namespace XFS {
         void send(HWND hWnd, DWORD messageType) {
             assert(pResult != NULL);
             std::stringstream ss;
-            ss << std::string("send ") << pResult->hResult << " for " << MsgType(messageType) << " to " << hWnd;
+            ss << std::string("Result::send(hWnd=") << hWnd << ", type=" << MsgType(messageType)
+               << ") with result " << Status(pResult->hResult) << " for ReqID=" << pResult->RequestID;
             WFMOutputTraceData((LPSTR)ss.str().c_str());
             PostMessage(hWnd, messageType, NULL, (LPARAM)pResult);
         }
