@@ -11,8 +11,9 @@
 #include <winscard.h>
 
 #include "EventSupport.h"
-#include "PCSC/Status.h"
 #include "Settings.h"
+#include "PCSC/Status.h"
+#include "XFS/ReadFlags.h"
 
 class Manager;
 class Service : public EventNotifier {
@@ -71,8 +72,11 @@ public:// Функции, вызываемые в WFPExecute
     @param ReqID
         Трекинговый номер для отслеживания запроса, передается в сообщении
         `WFS_EXECUTE_COMPLETE`.
+    @param forRead
+        Список данных, которые необходимо прочитать. Реально читаются только `WFS_IDC_CHIP`,
+        для всех остальных типов возвращается признак того, что значение прочитать не удалось.
     */
-    void asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID);
+    void asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFlags forRead);
 
     std::pair<WFSIDCCARDDATA**, PCSC::Status> read() const;
     std::pair<WFSIDCCHIPIO*, PCSC::Status> transmit(WFSIDCCHIPIO* input) const;

@@ -38,7 +38,7 @@ public:
     /// Время, когда истекает таймаут для данной задачи.
     bc::steady_clock::time_point deadline;
     /// Сервис, который создал эту задачу.
-    const Service& mService;
+    Service& mService;
     /// Окно, которое получит уведомление о завершении задачи.
     HWND hWnd;
     /// Трекинговый номер данной задачи, который будет предоставлен в уведомлении окну `hWnd`.
@@ -47,7 +47,7 @@ public:
 public:
     typedef boost::shared_ptr<Task> Ptr;
 public:
-    Task(bc::steady_clock::time_point deadline, const Service& service, HWND hWnd, REQUESTID ReqID)
+    Task(bc::steady_clock::time_point deadline, Service& service, HWND hWnd, REQUESTID ReqID)
         : deadline(deadline), mService(service), hWnd(hWnd), ReqID(ReqID) {}
     inline bool operator<(const Task& other) const {
         return deadline < other.deadline;

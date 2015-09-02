@@ -406,7 +406,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             // Битовая маска с данными, которые должны быть прочитаны.
             WORD lpwReadData = *((WORD*)lpCmdData);
             if (lpwReadData & WFS_IDC_CHIP) {
-                pcsc.get(hService).asyncRead(dwTimeOut, hWnd, ReqID);
+                pcsc.get(hService).asyncRead(dwTimeOut, hWnd, ReqID, lpwReadData);
                 return WFS_SUCCESS;
             }
             return WFS_ERR_UNSUPP_COMMAND;

@@ -9,6 +9,8 @@
 #include <string>
 #include <sstream>
 #include <cassert>
+// Для std::memcpy
+#include <cstring>
 // Для работы с текущим временем, для получения времени дедлайна.
 #include <boost/chrono/chrono.hpp>
 
@@ -16,20 +18,58 @@
 #include <xfsadmin.h>
 
 class CardReadTask : public Task {
+    /// Данные, которые должны быть прочитаны.
+    XFS::ReadFlags mFlags;
 public:
-    CardReadTask(bc::steady_clock::time_point deadline, const Service& service, HWND hWnd, REQUESTID ReqID)
-        : Task(deadline, service, hWnd, ReqID) {}
+    CardReadTask(bc::steady_clock::time_point deadline, Service& service, HWND hWnd, REQUESTID ReqID, XFS::ReadFlags flags)
+        : Task(deadline, service, hWnd, ReqID), mFlags(flags) {}
     virtual bool match(const SCARD_READERSTATE& state) const {
         if (state.dwEventState & SCARD_STATE_PRESENT) {
-            // TODO: Объединить open с чтением ATR и вызват
-            // std::pair<WFSIDCCARDDATA**, PCSC::Status> r = mService.open();
-            // std::pair<WFSIDCCARDDATA**, PCSC::Status> r = mService.read();
+
+            // Подключаемся к карточке. Kalignite после события о том, что карточка вставлена, снова
+            // опрашивает состояние устройства (Service::getStatus) и если в нем карты нет (т.е. мы не
+            // выполним подключение), то он пытается прочитать треки еще раз, в резултате чего падает с сообщением:
+            // KXCardReader: Attempted to re-read an unread track on a swipe or dip card reader.On these devices, tracks can only be read on the initial accept.
+            PCSC::Status st = mService.open();
+
+            // Снимаем флаг, который мы обрабатываем отдельно.
+            XFS::ReadFlags flags = XFS::ReadFlags(mFlags.value() & ~WFS_IDC_CHIP);
+            // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
+            // В первом элементе будет наш результат, во всех последующих -- прочие запрошенные
+            // данные (пустые), в поледнем NULL -- признак конца массива.
+            //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+            WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(flags.size() + 2);
+            result[0] = translate(state);
+
+            for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
+                XFS::ReadFlags::type flag = (1 << i);
+                if (flags.value() & flag) {
+                    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+                    WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
+                    data->wDataSource = flag;
+                    data->wStatus = WFS_IDC_DATAMISSING;
+                    result[i+1] = data;
+                }
+            }
             // Уведомляем поставщика задачи, что она выполнена.
-            // XFS::Result(ReqID, serviceHandle(), r.second).data(r.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+            XFS::Result(ReqID, serviceHandle(), WFS_SUCCESS).data(result).send(hWnd, WFS_EXECUTE_COMPLETE);
             // Задача обработана, можно удалять из списка.
             return true;
         }
         return false;
+    }
+private:
+    static WFSIDCCARDDATA* translate(const SCARD_READERSTATE& state) {
+        //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+        WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
+        // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
+        data->wDataSource = WFS_IDC_CHIP;
+        data->wStatus = WFS_IDC_DATAOK;
+        data->ulDataLength = state.cbAtr;
+        data->lpbData = XFS::allocArr<BYTE>(state.cbAtr);
+        std::memcpy(data->lpbData, state.rgbAtr, state.cbAtr);
+
+        return data;
     }
 };
 /*
@@ -118,22 +158,25 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
     DWORD nameLen;
     DWORD atrLen;
     // Если карточки не будет в считывателе, то вернется ошибка и в ответ мы дадим WFS_IDC_MEDIANOTPRESENT
-    PCSC::Status st = SCardStatus(hCard,
-        // Имя получать не будем, тем не менее длину получить требуется, NULL недопустим.
-        NULL, &nameLen,
-        // Небольшой хак допустим, у нас прозрачная обертка, ничего лишнего.
-        (DWORD*)&state, &dwActiveProtocol,
-        // ATR получать не будем, тем не менее длину получить требуется, NULL недопустим.
-        NULL, &atrLen
-    );
-    log("SCardStatus", st);
-
+    PCSC::Status st = SCARD_S_SUCCESS;
+    if (hCard != 0) {
+        st = SCardStatus(hCard,
+            // Имя получать не будем, тем не менее длину получить требуется, NULL недопустим.
+            NULL, &nameLen,
+            // Небольшой хак допустим, у нас прозрачная обертка, ничего лишнего.
+            (DWORD*)&state, &dwActiveProtocol,
+            // ATR получать не будем, тем не менее длину получить требуется, NULL недопустим.
+            NULL, &atrLen
+        );
+        log("SCardStatus", st);
+    }
+    bool hasCard = hCard != 0 && st;
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCSTATUS* lpStatus = XFS::alloc<WFSIDCSTATUS>();
     // Набор флагов, определяющих состояние устройства. Наше устройство всегда на связи,
     // т.к. в противном случае при открытии сессии с PC/SC драйвером будет ошибка.
     lpStatus->fwDevice = WFS_IDC_DEVONLINE;
-    lpStatus->fwMedia = st ? state.translateMedia() : WFS_IDC_MEDIANOTPRESENT;
+    lpStatus->fwMedia = hasCard ? state.translateMedia() : WFS_IDC_MEDIANOTPRESENT;
     // У считывателей нет корзины для захваченных карт.
     lpStatus->fwRetainBin = WFS_IDC_RETAINNOTSUPP;
     // Модуль безопасноси отсутствует
@@ -142,7 +185,7 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
     // то данный параметр не имеет смысла.
     //TODO Хотя, может быть, можно будет его отслеживать как количество вытащенных карт.
     lpStatus->usCards = 0;
-    lpStatus->fwChipPower = st ? state.translateChipPower() : WFS_IDC_CHIPNOCARD;
+    lpStatus->fwChipPower = hasCard ? state.translateChipPower() : WFS_IDC_CHIPNOCARD;
     //TODO: Добавить lpszExtra со всеми параметрами, полученными от PC/SC.
     return std::make_pair(lpStatus, st);
 }
@@ -153,8 +196,11 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     // Получаем поддерживаемые картой протоколы.
     DWORD types;
     DWORD len = sizeof(DWORD);
-    PCSC::Status st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (BYTE*)&types, &len);
-    log("SCardGetAttrib(SCARD_ATTR_PROTOCOL_TYPES)", st);
+    PCSC::Status st = SCARD_S_SUCCESS;
+    if (hCard != 0) {
+        st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (BYTE*)&types, &len);
+        log("SCardStatus", st);
+    }
 
     // Устройство является считывателем карт.
     lpCaps->wClass = WFS_SERVICE_CLASS_IDC;
@@ -193,10 +239,10 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     return std::make_pair(lpCaps, st);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID) {
+void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFlags forRead) {
     namespace bc = boost::chrono;
     bc::steady_clock::time_point now = bc::steady_clock::now();
-    pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID)));
+    pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID, forRead)));
 }
 std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore

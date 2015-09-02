@@ -36,7 +36,7 @@ class Manager {
 public:
     /// Тип для отображения сервисов XFS на карты PC/SC.
     typedef std::map<HSERVICE, Service*> ServiceMap;
-public:
+private:
     /// Контекст подсистемы PC/SC.
     SCARDCONTEXT hContext;
     /// Список карт, открытых для взаимодействия с системой XFS.
@@ -47,6 +47,7 @@ public:
     ///`waitChangesThread`.
     bool stopRequested;
 
+    /// Контейнер, управляющий асинхронными задачами на получение данных с карточки.
     TaskContainer tasks;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
@@ -83,7 +84,9 @@ public:// Подписка на события и генерация событ�
     */
     bool addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
     bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
-private:
+public:// Доступ к внутренностям
+    inline SCARDCONTEXT context() const { return hContext; }
+private:// Опрос изменений
     /// Блокирует выполнение, пока поток не будет остановлен. Необходимо
     /// запускать из своего потока.
     void waitChangesRun();
