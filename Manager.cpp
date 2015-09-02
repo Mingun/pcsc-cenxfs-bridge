@@ -160,8 +160,6 @@ bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     bool readersChanged = false;
     bool first = true;
     for (std::vector<SCARD_READERSTATE>::iterator it = readers.begin(); it != readers.end(); ++it) {
-        // Cообщаем PC/SC, что мы знаем текущее состояние
-        it->dwCurrentState = it->dwEventState;
         // Если что-то изменилось, уведомляем об этом всех заинтересованных.
         if (it->dwEventState & SCARD_STATE_CHANGED) {
             // Первый элемент в списке -- объект, через который приходят
@@ -171,6 +169,8 @@ bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
             }
             notifyChanges(*it);
         }
+        // Cообщаем PC/SC, что мы знаем текущее состояние
+        it->dwCurrentState = it->dwEventState;
         first = false;
     }
     return readersChanged;

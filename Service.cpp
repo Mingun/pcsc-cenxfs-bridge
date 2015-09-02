@@ -24,33 +24,10 @@ public:
     CardReadTask(bc::steady_clock::time_point deadline, Service& service, HWND hWnd, REQUESTID ReqID, XFS::ReadFlags flags)
         : Task(deadline, service, hWnd, ReqID), mFlags(flags) {}
     virtual bool match(const SCARD_READERSTATE& state) const {
-        if (state.dwEventState & SCARD_STATE_PRESENT) {
-
-            // Подключаемся к карточке. Kalignite после события о том, что карточка вставлена, снова
-            // опрашивает состояние устройства (Service::getStatus) и если в нем карты нет (т.е. мы не
-            // выполним подключение), то он пытается прочитать треки еще раз, в резултате чего падает с сообщением:
-            // KXCardReader: Attempted to re-read an unread track on a swipe or dip card reader.On these devices, tracks can only be read on the initial accept.
-            PCSC::Status st = mService.open();
-
-            // Снимаем флаг, который мы обрабатываем отдельно.
-            XFS::ReadFlags flags = XFS::ReadFlags(mFlags.value() & ~WFS_IDC_CHIP);
-            // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
-            // В первом элементе будет наш результат, во всех последующих -- прочие запрошенные
-            // данные (пустые), в поледнем NULL -- признак конца массива.
-            //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-            WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(flags.size() + 2);
-            result[0] = translate(state);
-
-            for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
-                XFS::ReadFlags::type flag = (1 << i);
-                if (flags.value() & flag) {
-                    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-                    WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
-                    data->wDataSource = flag;
-                    data->wStatus = WFS_IDC_DATAMISSING;
-                    result[i+1] = data;
-                }
-            }
+        DWORD added = state.dwCurrentState ^ state.dwEventState;
+        // Если в указанном бите есть изменения и он был установлен, генерируем событие вставки карты.
+        if (added & SCARD_STATE_PRESENT) {
+            WFSIDCCARDDATA** result = wrap(translate(state), mFlags);
             // Уведомляем поставщика задачи, что она выполнена.
             XFS::Result(ReqID, serviceHandle(), WFS_SUCCESS).data(result).send(hWnd, WFS_EXECUTE_COMPLETE);
             // Задача обработана, можно удалять из списка.
@@ -163,15 +140,20 @@ PCSC::Status Service::unlock() {
     return st;
 }
 /// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
-void Service::notify(const SCARD_READERSTATE& state) const {
-    /*if (state.dwEventState & SCARD_STATE_) {
+void Service::notify(const SCARD_READERSTATE& state) {
+    DWORD added = (state.dwCurrentState ^ state.dwEventState) & state.dwEventState;
+    /*if (added & SCARD_STATE_) {
         EventNotifier::notify(WFS_SYSTEM_EVENT, PCSC::DeviceDetected(*this, state));
     }*/
-    if (state.dwEventState & SCARD_STATE_EMPTY) {
+    if (added & SCARD_STATE_EMPTY) {
         EventNotifier::notify(WFS_SERVICE_EVENT, PCSC::CardRemoved(*this));
+        if (hCard != 0) {
+            close();
+        }
     }
-    if (state.dwEventState & SCARD_STATE_PRESENT) {
+    if (added & SCARD_STATE_PRESENT) {
         EventNotifier::notify(WFS_EXECUTE_EVENT, PCSC::CardInserted(*this));
+        open();
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
