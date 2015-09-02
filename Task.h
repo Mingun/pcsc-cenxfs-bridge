@@ -17,12 +17,11 @@
 
 #include <boost/chrono/chrono.hpp>
 
-// PC/CS API
+// PC/CS API -- для SCARD_READERSTATE
 #include <winscard.h>
-// Определения для ридеров карт (Identification card unit (IDC))
+// Определения для ридеров карт (Identification card unit (IDC)) --
+// для REQUESTID, HSERVICE и WFS_ERR_*
 #include <XFSIDC.h>
-
-#include "XFS/Result.h"
 
 namespace mi = boost::multi_index;
 namespace bc = boost::chrono;
@@ -67,9 +66,7 @@ public:
     virtual bool match(const SCARD_READERSTATE& state) const = 0;
     /// Уведомляет XFS-слушателя о завершении ожидания.
     /// @param result Код ответа для завершения.
-    void complete(HRESULT result) const {
-        XFS::Result(ReqID, serviceHandle(), result).send(hWnd, WFS_EXECUTE_COMPLETE);
-    }
+    void complete(HRESULT result) const;
     /// Вызывается, если запрос был отменен вызовом WFPCancelAsyncRequest.
     inline void cancel() const { complete(WFS_ERR_CANCELED); }
     inline void timeout() const { complete(WFS_ERR_TIMEOUT); }
