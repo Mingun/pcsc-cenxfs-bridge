@@ -38,18 +38,27 @@ protected:
 protected:
     Flags(T value) : mValue(value) {}
 public:
-    inline T value() const { return mValue; }
+    inline T value() const { return this->mValue; }
+    std::size_t size() const {
+        std::size_t count = 0;
+        for (std::size_t i = 0; i < sizeof(T)*8; ++i) {
+            if (this->mValue & (1 << i)) {
+                ++count;
+            }
+        }
+        return count;
+    }
 protected:
     template<std::size_t N>
     inline std::vector<CTString> flagNames(CTString (&names)[N]) const {
         const std::size_t size = N-1 < sizeof(T)*8 ? N-1 : sizeof(T)*8;
 
         std::vector<CTString> result(size);
-        if (mValue == (T)0) {
+        if (this->mValue == (T)0) {
             result[0] = names[0];
         }
         for (std::size_t i = 0; i < size; ++i) {
-            if (mValue & (1 << i)) {
+            if (this->mValue & (1 << i)) {
                 result[i+1] = names[i+1];
             }
         }
