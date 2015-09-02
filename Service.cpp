@@ -58,6 +58,29 @@ public:
         }
         return false;
     }
+public:
+    static WFSIDCCARDDATA** wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) {
+        // Снимаем флаг, который мы обрабатываем отдельно.
+        XFS::ReadFlags flags = XFS::ReadFlags(forRead.value() & ~WFS_IDC_CHIP);
+        // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
+        // В первом элементе будет наш результат, во всех последующих -- прочие запрошенные
+        // данные (пустые), в поледнем NULL -- признак конца массива.
+        //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+        WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(flags.size() + 2);
+        result[0] = iccData;
+
+        for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
+            XFS::ReadFlags::type flag = (1 << i);
+            if (flags.value() & flag) {
+                //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+                WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
+                data->wDataSource = flag;
+                data->wStatus = WFS_IDC_DATAMISSING;
+                result[i+1] = data;
+            }
+        }
+        return result;
+    }
 private:
     static WFSIDCCARDDATA* translate(const SCARD_READERSTATE& state) {
         //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
@@ -240,11 +263,20 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFlags forRead) {
-    namespace bc = boost::chrono;
-    bc::steady_clock::time_point now = bc::steady_clock::now();
-    pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID, forRead)));
+    // В считывателе нет карты, начинаем ожидание, пока вставят. В противном случае
+    // информацию можно послать сразу.
+    if (hCard == 0) {
+        namespace bc = boost::chrono;
+        bc::steady_clock::time_point now = bc::steady_clock::now();
+        pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID, forRead)));
+    } else {
+        WFSIDCCARDDATA** result = CardReadTask::wrap(read(), forRead);
+        // Уведомляем поставщика задачи, что она выполнена.
+        XFS::Result(ReqID, handle(), WFS_SUCCESS).data(result).send(hWnd, WFS_EXECUTE_COMPLETE);
+    }
 }
-std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
+WFSIDCCARDDATA* Service::read() const {
+    assert(hCard != 0 && "Attempt read ATR when card not in the reader");
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
@@ -258,12 +290,8 @@ std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
     data->lpbData = XFS::allocArr<BYTE>(data->ulDataLength);
     st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
     log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, ?, ?)", st);
-    // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
-    // В первом элементе будет наш результат, во втором NULL -- признак конца массива.
-    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-    WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(2);
-    result[0] = data;
-    return std::make_pair(result, st);
+
+    return data;
 }
 std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) const {
     assert(input != NULL && "Service::transmit: No input from XFS subsystem");
