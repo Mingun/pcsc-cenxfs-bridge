@@ -1,5 +1,5 @@
-#ifndef PCSC_CENXFS_BRIDGE_SETTINGS_H
-#define PCSC_CENXFS_BRIDGE_SETTINGS_H
+#ifndef PCSC_CENXFS_BRIDGE_Settings_H
+#define PCSC_CENXFS_BRIDGE_Settings_H
 
 #pragma once
 
@@ -24,4 +24,4 @@ public:
     std::string toJSONString() const;
 };
 
-#endif // PCSC_CENXFS_BRIDGE_SETTINGS_H
+#endif // PCSC_CENXFS_BRIDGE_Settings_H

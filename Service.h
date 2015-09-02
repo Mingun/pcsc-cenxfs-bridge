@@ -24,7 +24,7 @@ class Service : public EventNotifier {
     /// Протокол, по которому работает карта.
     DWORD dwActiveProtocol;
     /// Настройки данного сервиса.
-    Settings settings;
+    Settings mSettings;
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class Manager;
 private:
@@ -36,7 +36,6 @@ private:
     Service(Manager& pcsc, HSERVICE hService, const Settings& settings);
 public:
     ~Service();
-    inline HSERVICE handle() const { return hService; }
 
     PCSC::Status open(SCARDCONTEXT hContext);
     PCSC::Status close();
@@ -44,7 +43,7 @@ public:
     PCSC::Status lock();
     PCSC::Status unlock();
 
-    inline void setTraceLevel(DWORD level) { settings.traceLevel = level; }
+    inline void setTraceLevel(DWORD level) { mSettings.traceLevel = level; }
     /** Данный метод вызывается при любом изменении любого считывателя и при изменении количества считывателей.
     @param state
         Информация о текущем состоянии изменившегося считывателя.
@@ -77,6 +76,9 @@ public:// Функции, вызываемые в WFPExecute
 
     std::pair<WFSIDCCARDDATA**, PCSC::Status> read() const;
     std::pair<WFSIDCCHIPIO*, PCSC::Status> transmit(WFSIDCCHIPIO* input) const;
+public:// Служебные функции
+    inline HSERVICE handle() const { return hService; }
+    inline const Settings& settings() const { return mSettings; }
 private:
     void log(std::string operation, PCSC::Status st) const;
 };

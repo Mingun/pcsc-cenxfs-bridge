@@ -16,13 +16,18 @@ public:
     inline RegKey(HKEY root, const char* name) {
         HRESULT r = WFMOpenKey(root, (LPSTR)name, &hKey);
         std::stringstream ss;
-        ss << std::string("RegKey::RegKey(") << root << ", " << (name == NULL ? "NULL" : name) << ", &" << hKey << ") = "  << r;
+        ss << std::string("RegKey::RegKey(root=") << root << ", name=";
+        if (name == NULL)
+            ss << "NULL";
+        else
+            ss << '"' << name << '"';
+        ss << ", hKey=&" << hKey << ") = "  << r;
         WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
     inline ~RegKey() {
         HRESULT r = WFMCloseKey(hKey);
         std::stringstream ss;
-        ss << std::string("WFMCloseKey(") << hKey << ") = " << r;
+        ss << std::string("WFMCloseKey(hKey=") << hKey << ") = " << r;
         WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
 
@@ -34,7 +39,7 @@ public:
         DWORD dwSize = 0;
         HRESULT r = WFMQueryValue(hKey, (LPSTR)name, NULL, &dwSize);
         {std::stringstream ss;
-        ss << '(' << dwSize << ')' << r;
+        ss << "value[getSize](name=\"" << name << "\", size=&" << dwSize << ") = " << r;
         WFMOutputTraceData((LPSTR)ss.str().c_str());}
         // Используем вектор, т.к. он гарантирует непрерывность памяти под данные,
         // чего нельзя сказать в случае со string.
@@ -44,7 +49,7 @@ public:
             dwSize = value.capacity();
             r = WFMQueryValue(hKey, (LPSTR)name, &value[0], &dwSize);
             {std::stringstream ss;
-            ss << '(' << dwSize << ')' << r;
+            ss << "value[getValue](name=\"" << name << "\", value=&" << &value[0] << ", size=&" << dwSize << ") = " << r;
             WFMOutputTraceData((LPSTR)ss.str().c_str());}
         }
         std::string result = std::string(value.begin(), value.end()-1);
@@ -113,7 +118,7 @@ Settings::Settings(const char* serviceName, int traceLevel)
     // У Калигнайта под данным корнем не появляется провайдера, если он в
     // HKEY_LOCAL_MACHINE\SOFTWARE\XFS\SERVICE_PROVIDERS\
     // HKEY root = WFS_CFG_HKEY_XFS_ROOT;
-    HKEY root = WFS_CFG_USER_DEFAULT_XFS_ROOT;
+    HKEY root = WFS_CFG_USER_DEFAULT_XFS_ROOT;// HKEY_USERS\.DEFAULT\XFS
     providerName = RegKey(root, "LOGICAL_SERVICES").child((LPSTR)serviceName).value("Provider");
 
     RegKey pcscSettings = RegKey(root, "SERVICE_PROVIDERS").child(providerName.c_str());
@@ -124,10 +129,10 @@ Settings::Settings(const char* serviceName, int traceLevel)
 std::string Settings::toJSONString() const {
     std::stringstream ss;
     ss << "{\n";
-    ss << "ProviderName: " << providerName << ",\n";
-    ss << "ReaderName: " << readerName << ",\n";
-    ss << "TraceLevel: " << traceLevel << ",\n";
-    ss << "ReportReadTrack2: " << std::boolalpha << reportReadTrack2 << ",\n";
+    ss << "\tProviderName: " << providerName << ",\n";
+    ss << "\tReaderName: " << readerName << ",\n";
+    ss << "\tTraceLevel: " << traceLevel << ",\n";
+    ss << "\tReportReadTrack2: " << std::boolalpha << reportReadTrack2 << ",\n";
     ss << '}';
     return ss.str();
 }

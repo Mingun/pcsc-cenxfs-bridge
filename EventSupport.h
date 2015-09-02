@@ -1,6 +1,7 @@
 #ifndef PCSC_CENXFS_BRIDGE_EventSupport_H
 #define PCSC_CENXFS_BRIDGE_EventSupport_H
 
+#pragma once
 
 #include <set>
 #include <vector>

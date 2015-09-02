@@ -303,7 +303,7 @@ HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
         case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет
             std::pair<WFSIDCSTATUS*, PCSC::Status> status = pcsc.get(hService).getStatus();
             // Получение информации о считывателе всегда успешно.
-            XFS::Result(ReqID, hService, 0).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
+            XFS::Result(ReqID, hService, WFS_SUCCESS).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_CAPABILITIES: {// Дополнительных параметров нет

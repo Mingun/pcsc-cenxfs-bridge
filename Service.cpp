@@ -55,7 +55,7 @@ Service::Service(Manager& pcsc, HSERVICE hService, const Settings& settings)
     , hService(hService)
     , hCard(0)
     , dwActiveProtocol(0)
-    , settings(settings)
+    , mSettings(settings)
 {
     std::string json = "Settings: " + settings.toJSONString();
     WFMOutputTraceData((LPSTR)json.c_str());
@@ -68,7 +68,7 @@ Service::~Service() {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PCSC::Status Service::open(SCARDCONTEXT hContext) {
     assert(hCard == 0 && "Must open only one card at one service");
-    PCSC::Status st = SCardConnect(hContext, settings.readerName.c_str(), SCARD_SHARE_SHARED,
+    PCSC::Status st = SCardConnect(hContext, mSettings.readerName.c_str(), SCARD_SHARE_SHARED,
         // У нас нет предпочитаемого протокола, работаем с тем, что дают
         SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
         // Получаем хендл карты и выбранный протокол.
@@ -117,6 +117,7 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
     PCSC::MediaStatus state;
     DWORD nameLen;
     DWORD atrLen;
+    // Если карточки не будет в считывателе, то вернется ошибка и в ответ мы дадим WFS_IDC_MEDIANOTPRESENT
     PCSC::Status st = SCardStatus(hCard,
         // Имя получать не будем, тем не менее длину получить требуется, NULL недопустим.
         NULL, &nameLen,
@@ -164,7 +165,7 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     // Какие треки могут быть прочитаны -- никакие, только чип.
     // Так как Kalignite не желает работать, если считыватель не умеет читать хоть какой-то
     // трек, то сообщаем, что умеем читать самый востребованный, чтобы удовлетворить Kaliginte.
-    lpCaps->fwReadTracks = settings.reportReadTrack2 ? WFS_IDC_TRACK2 : WFS_IDC_NOTSUPP;
+    lpCaps->fwReadTracks = mSettings.reportReadTrack2 ? WFS_IDC_TRACK2 : WFS_IDC_NOTSUPP;
     // Какие треки могут быть записаны -- никакие, только чип.
     lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
     // Виды поддерживаемых устройством протоколов -- все возможные.
@@ -219,7 +220,8 @@ std::pair<WFSIDCCARDDATA**, PCSC::Status> Service::read() const {
     return std::make_pair(result, st);
 }
 std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) const {
-    assert(input != NULL);
+    assert(input != NULL && "Service::transmit: No input from XFS subsystem");
+    assert(hCard != 0 && "Service::transmit: No card in reader");
 
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCHIPIO* result = XFS::alloc<WFSIDCCHIPIO>();
@@ -237,6 +239,6 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Service::log(std::string operation, PCSC::Status st) const {
     std::stringstream ss;
-    ss << operation << " card reader '" << settings.readerName << "': " << st;
+    ss << operation << " card reader '" << mSettings.readerName << "': " << st;
     WFMOutputTraceData((LPSTR)ss.str().c_str());
 }
