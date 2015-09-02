@@ -37,7 +37,7 @@ private:
 public:
     ~Service();
 
-    PCSC::Status open(SCARDCONTEXT hContext);
+    PCSC::Status open();
     PCSC::Status close();
 
     PCSC::Status lock();

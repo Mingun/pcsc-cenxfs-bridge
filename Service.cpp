@@ -66,9 +66,9 @@ Service::~Service() {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-PCSC::Status Service::open(SCARDCONTEXT hContext) {
+PCSC::Status Service::open() {
     assert(hCard == 0 && "Must open only one card at one service");
-    PCSC::Status st = SCardConnect(hContext, mSettings.readerName.c_str(), SCARD_SHARE_SHARED,
+    PCSC::Status st = SCardConnect(pcsc.context(), mSettings.readerName.c_str(), SCARD_SHARE_SHARED,
         // У нас нет предпочитаемого протокола, работаем с тем, что дают
         SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
         // Получаем хендл карты и выбранный протокол.
