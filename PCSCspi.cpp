@@ -208,7 +208,7 @@ HRESULT SPI_API WFPDeregister(HSERVICE hService, DWORD dwEventClass, HWND hWndRe
         return WFS_ERR_INVALID_HSERVICE;
     }
     // Удаление подписчика всегда успешно.
-    XFS::Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_REGISTER_COMPLETE);
+    XFS::Result(ReqID, hService, WFS_SUCCESS).send(hWnd, WFS_DEREGISTER_COMPLETE);
     // Возможные коды завершения асинхронного запроса (могут возвращаться и другие)
     // WFS_ERR_CANCELED The request was canceled by WFSCancelAsyncRequest.
 
