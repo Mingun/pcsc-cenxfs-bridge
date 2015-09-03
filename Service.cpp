@@ -4,6 +4,7 @@
 #include "Manager.h"
 #include "PCSC/MediaStatus.h"
 #include "PCSC/ReaderState.h"
+#include "PCSC/ProtocolTypes.h"
 #include "PCSC/Events.h"
 
 #include <string>
@@ -72,22 +73,6 @@ private:
         return data;
     }
 };
-/*
-class ProtocolTypes {
-    DWORD value;
-public:
-    inline ProtocolTypes(DWORD flags) : value(flags) {}
-    inline WORD translate() {
-        WORD result = 0;
-        if (value & (1 << 0)) {// Нулевой бит -- протокол T0
-            result |= WFS_IDC_CHIPT0;
-        }
-        if (value & (1 << 1)) {// Первый бит -- протокол T1
-            result |= WFS_IDC_CHIPT1;
-        }
-        return result;
-    }
-};*/
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Service::Service(Manager& pcsc, HSERVICE hService, const Settings& settings)
@@ -97,8 +82,12 @@ Service::Service(Manager& pcsc, HSERVICE hService, const Settings& settings)
     , dwActiveProtocol(0)
     , mSettings(settings)
 {
-    std::string json = "Settings: " + settings.toJSONString();
+    std::string json = "[PCSC] Settings: " + settings.toJSONString();
     WFMOutputTraceData((LPSTR)json.c_str());
+    // Сразу пытаемся открыть карту, вдруг она уже в считывателе.
+    // Это нужно для того, чтобы функция getStatus корректно возвращали признак
+    // наличия карточки.
+    open();
 }
 Service::~Service() {
     if (hCard != 0) {
@@ -199,14 +188,14 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     WFSIDCCAPS* lpCaps = XFS::alloc<WFSIDCCAPS>();
 
     // Получаем поддерживаемые картой протоколы.
-    DWORD types;
+    PCSC::ProtocolTypes types;
     DWORD len = sizeof(DWORD);
     PCSC::Status st = SCARD_S_SUCCESS;
     if (hCard != 0) {
         st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (BYTE*)&types, &len);
         log("SCardStatus", st);
     }
-
+    bool hasCard = hCard != 0 && st;
     // Устройство является считывателем карт.
     lpCaps->wClass = WFS_SERVICE_CLASS_IDC;
     // Карта вставляется рукой и может быть вытащена в любой момент.
@@ -220,7 +209,7 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     // Какие треки могут быть записаны -- никакие, только чип.
     lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
     // Виды поддерживаемых устройством протоколов -- все возможные.
-    lpCaps->fwChipProtocols = WFS_IDC_CHIPT0 | WFS_IDC_CHIPT1;
+    lpCaps->fwChipProtocols = hasCard ? types.translate() : (WFS_IDC_CHIPT0 | WFS_IDC_CHIPT1);
     // Максимальное количество карт, которое устройство может захватить. Всегда 0, т.к. не захватывает.
     lpCaps->usCards = 0;
     // Тип модуля безопасности. Не поддерживается.
@@ -283,7 +272,21 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
     WFSIDCCHIPIO* result = XFS::alloc<WFSIDCCHIPIO>();
     result->wChipProtocol = input->wChipProtocol;
 
-    SCARD_IO_REQUEST ioRq = {0};//TODO: Получить протокол.
+    //TODO: Вообще говоря, это только протокол T0
+    // const SCARD_T0_COMMAND* cmd = (SCARD_T0_COMMAND*)input->lpbChipData;
+    // Последний байт данных -- это ожидаемая длина ответа в байтах.
+    // При этом число 0x00 означает длину 256.
+    // char expectedRsLen = input->lpbChipData[input->ulChipDataLength-1];
+    // 2 байта на код ответа, остально -- на сам ответ чипа.
+    result->ulChipDataLength = 256 + 2;
+    // TODO: Сколько памяти выделять под буфер? Для протокола T0 нужно минимум 2 под код ответа.
+    result->lpbChipData = XFS::allocArr<BYTE>(result->ulChipDataLength);
+    //TODO: Убедится в выравнивании!
+    SCARD_IO_REQUEST ioRq = {input->wChipProtocol, sizeof(SCARD_IO_REQUEST)};
+    // TODO: Обработать специальный случай. Ниже выдерэжка из документации для длины передаваемых данных:
+    //    For T=0, in the special case where no data is sent to the card and no data expected in return,
+    //    this length must reflect that the bP3 member is not being sent; the length should be
+    //    `sizeof(CmdBytes) - sizeof(BYTE)`.
     PCSC::Status st = SCardTransmit(hCard,
         &ioRq, input->lpbChipData, input->ulChipDataLength,
         NULL, result->lpbChipData, &result->ulChipDataLength
@@ -295,6 +298,6 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Service::log(std::string operation, PCSC::Status st) const {
     std::stringstream ss;
-    ss << operation << " card reader '" << mSettings.readerName << "': " << st;
+    ss << std::string("[PCSC='") << mSettings.readerName << "'] " << operation << ": " << st;
     WFMOutputTraceData((LPSTR)ss.str().c_str());
 }
