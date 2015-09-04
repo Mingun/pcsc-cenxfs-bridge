@@ -53,7 +53,7 @@ protected:
     inline std::vector<CTString> flagNames(CTString (&names)[N]) const {
         const std::size_t size = N-1 < sizeof(T)*8 ? N-1 : sizeof(T)*8;
 
-        std::vector<CTString> result(size);
+        std::vector<CTString> result(sizeof(T)*8);
         if (this->mValue == (T)0) {
             result[0] = names[0];
         }
