@@ -8,6 +8,15 @@
 class Settings
 {
 public:
+    class Track2 {
+    public:
+        bool report;
+        bool fromChip;
+        std::string value;
+    public:
+        Track2() : report(false), fromChip(false) {}
+    };
+public:
     /// Название самого провайдера.
     std::string providerName;
     /// Название считывателя, с которым должен работать провайдер.
@@ -17,7 +26,7 @@ public:
     int traceLevel;
     /// Kalignite требует, чтобы считыватель умел читать треки 2, поэтому мы имеем
     /// такую настройку.
-    bool reportReadTrack2;
+    Track2 track2;
 public:
     Settings(const char* serviceName, int traceLevel);
 

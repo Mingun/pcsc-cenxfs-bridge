@@ -205,7 +205,7 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     // Какие треки могут быть прочитаны -- никакие, только чип.
     // Так как Kalignite не желает работать, если считыватель не умеет читать хоть какой-то
     // трек, то сообщаем, что умеем читать самый востребованный, чтобы удовлетворить Kaliginte.
-    lpCaps->fwReadTracks = mSettings.reportReadTrack2 ? WFS_IDC_TRACK2 : WFS_IDC_NOTSUPP;
+    lpCaps->fwReadTracks = mSettings.track2.report ? WFS_IDC_TRACK2 : WFS_IDC_NOTSUPP;
     // Какие треки могут быть записаны -- никакие, только чип.
     lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
     // Виды поддерживаемых устройством протоколов -- все возможные.

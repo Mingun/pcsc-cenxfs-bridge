@@ -95,7 +95,6 @@ public:
 
 Settings::Settings(const char* serviceName, int traceLevel)
     : traceLevel(traceLevel)
-    , reportReadTrack2(false)
 {
     // У Калигнайта под данным корнем не появляется провайдера, если он в
     // HKEY_LOCAL_MACHINE\SOFTWARE\XFS\SERVICE_PROVIDERS\
@@ -104,9 +103,12 @@ Settings::Settings(const char* serviceName, int traceLevel)
     providerName = RegKey(root, "LOGICAL_SERVICES").child((LPSTR)serviceName).value("Provider");
 
     RegKey pcscSettings = RegKey(root, "SERVICE_PROVIDERS").child(providerName.c_str());
-
     readerName = pcscSettings.value("ReaderName");
-    reportReadTrack2 = pcscSettings.dwValue("ReportReadTrack2") != 0;
+
+    RegKey track2Settings = pcscSettings.child("Track2");
+    track2.report = track2Settings.dwValue("Report") != 0;
+    track2.fromChip = track2Settings.dwValue("FromChip") != 0;
+    track2.value = track2Settings.value();
 }
 std::string Settings::toJSONString() const {
     std::stringstream ss;
@@ -114,7 +116,9 @@ std::string Settings::toJSONString() const {
     ss << "\tProviderName: " << providerName << ",\n";
     ss << "\tReaderName: " << readerName << ",\n";
     ss << "\tTraceLevel: " << traceLevel << ",\n";
-    ss << "\tReportReadTrack2: " << std::boolalpha << reportReadTrack2 << ",\n";
+    ss << "\tTrack2.Report: " << std::boolalpha << track2.report << ",\n";
+    ss << "\tTrack2.FromChip: " << std::boolalpha << track2.fromChip << ",\n";
+    ss << "\tTrack2.Value: " << track2.value << ",\n";
     ss << '}';
     return ss.str();
 }
