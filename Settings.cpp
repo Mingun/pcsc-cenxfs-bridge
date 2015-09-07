@@ -3,44 +3,34 @@
 
 #include <string>
 #include <vector>
-#include <sstream>
-#include <iostream>
 // XFS API для функций доступа к реестру.
 #include <xfsconf.h>
-// Для WFMOutputTraceData.
-#include <xfsadmin.h>
+
+#include "XFS/Logger.h"
 
 class RegKey {
     HKEY hKey;
 public:
     inline RegKey(HKEY root, const char* name) {
         HRESULT r = WFMOpenKey(root, (LPSTR)name, &hKey);
-        std::stringstream ss;
-        ss << std::string("RegKey::RegKey(root=") << root << ", name=";
-        if (name == NULL)
-            ss << "NULL";
-        else
-            ss << '"' << name << '"';
-        ss << ", hKey=&" << hKey << ") = "  << r;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());
+
+        XFS::Logger() << "RegKey::RegKey(root=" << root << ", name=" << name << ", hKey=&" << hKey << ") = "  << r;
     }
     inline ~RegKey() {
         HRESULT r = WFMCloseKey(hKey);
-        std::stringstream ss;
-        ss << std::string("WFMCloseKey(hKey=") << hKey << ") = " << r;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());
+
+        XFS::Logger() << "WFMCloseKey(hKey=" << hKey << ") = " << r;
     }
 
     inline RegKey child(const char* name) const {
         return RegKey(hKey, name);
     }
-    inline std::string value(const char* name) const {
+    inline std::string value(const char* name = NULL) const {
         // Узнаем размер значения ключа.
         DWORD dwSize = 0;
         HRESULT r = WFMQueryValue(hKey, (LPSTR)name, NULL, &dwSize);
-        {std::stringstream ss;
-        ss << "value[getSize](name=\"" << name << "\", size=&" << dwSize << ") = " << r;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());}
+
+        {XFS::Logger() << "RegKey::value[size](name=" << name << ", size=&" << dwSize << ") = " << r;}
         // Используем вектор, т.к. он гарантирует непрерывность памяти под данные,
         // чего нельзя сказать в случае со string.
         // dwSize содержит длину строки без завершающего NULL, но он записывается в выходное значение.
@@ -48,14 +38,11 @@ public:
         if (dwSize > 0) {
             dwSize = value.capacity();
             r = WFMQueryValue(hKey, (LPSTR)name, &value[0], &dwSize);
-            {std::stringstream ss;
-            ss << "value[getValue](name=\"" << name << "\", value=&" << &value[0] << ", size=&" << dwSize << ") = " << r;
-            WFMOutputTraceData((LPSTR)ss.str().c_str());}
+            {XFS::Logger() << "RegKey::value[value](name=" << name << ", value=&" << &value[0] << ", size=&" << dwSize << ") = " << r;}
         }
         std::string result = std::string(value.begin(), value.end()-1);
-        std::stringstream ss;
-        ss << std::string("RegKey::value(") << name << ") = " << result;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());
+
+        XFS::Logger() << "RegKey::value(name=" << name << ") = " << result;
         return result;
     }
     inline DWORD dwValue(const char* name) const {
@@ -63,14 +50,13 @@ public:
         DWORD result = 0;
         DWORD dwSize = sizeof(DWORD);
         HRESULT r = WFMQueryValue(hKey, (LPSTR)name, (LPSTR)&result, &dwSize);
-        std::stringstream ss;
-        ss << std::string("RegKey::value(") << name << ") = " << result;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());
+
+        XFS::Logger() << "RegKey::value(name=" << name << ") = " << result;
         return result;
     }
     /// Отладочная функция для вывода в трассу всех дочерных ключей.
     void keys() const {
-        WFMOutputTraceData("keys");
+        {XFS::Logger() << "keys";}
         std::vector<char> keyName(256);
         for (DWORD i = 0; ; ++i) {
             DWORD size = keyName.capacity();
@@ -79,13 +65,14 @@ public:
                 break;
             }
             keyName[size] = '\0';
-            WFMOutputTraceData((LPSTR)&keyName[0]);
+
+            XFS::Logger() << &keyName[0];
         }
     }
     /// Отладочная функция для вывода в трассу всех дочерных значений ключа.
     /// Значение ключа -- это пара (имя=значение).
     void values() const {
-        WFMOutputTraceData("values");
+        {XFS::Logger() << "values";}
         // К сожалению, узнать конкретные длины заранее невозможно.
         std::vector<char> name(256);
         std::vector<char> value(256);
@@ -98,16 +85,11 @@ public:
             }
             name[szName] = '\0';
             value[szValue] = '\0';
-            std::stringstream ss;
-            ss << i << ": " << '('<<szName<<','<<szValue<<')' << std::string(name.begin(), name.begin()+szName) << "="
-               << std::string(value.begin(), value.begin()+szValue);
-            WFMOutputTraceData((LPSTR)ss.str().c_str());
+
+            XFS::Logger()
+                << i << ": " << '('<<szName<<','<<szValue<<')' << std::string(name.begin(), name.begin()+szName) << "="
+                << std::string(value.begin(), value.begin()+szValue);
         }
-    }
-    static void log(std::string operation, HRESULT r) {
-        std::stringstream ss;
-        ss << operation << r;
-        WFMOutputTraceData((LPSTR)ss.str().c_str());
     }
 };
 
