@@ -78,7 +78,10 @@ public:// Функции, вызываемые в WFPExecute
     */
     void asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFlags forRead);
 
-    WFSIDCCARDDATA* read() const;
+    WFSIDCCARDDATA* readChip() const;
+    WFSIDCCARDDATA* readTrack2() const;
+    WFSIDCCARDDATA** wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) const;
+
     std::pair<WFSIDCCHIPIO*, PCSC::Status> transmit(WFSIDCCHIPIO* input) const;
 public:// Служебные функции
     inline HSERVICE handle() const { return hService; }

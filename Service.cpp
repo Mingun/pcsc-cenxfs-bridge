@@ -28,36 +28,13 @@ public:
         DWORD added = state.dwCurrentState ^ state.dwEventState;
         // Если в указанном бите есть изменения и он был установлен, генерируем событие вставки карты.
         if (added & SCARD_STATE_PRESENT) {
-            WFSIDCCARDDATA** result = wrap(translate(state), mFlags);
+            WFSIDCCARDDATA** result = mService.wrap(translate(state), mFlags);
             // Уведомляем поставщика задачи, что она выполнена.
             XFS::Result(ReqID, serviceHandle(), WFS_SUCCESS).data(result).send(hWnd, WFS_EXECUTE_COMPLETE);
             // Задача обработана, можно удалять из списка.
             return true;
         }
         return false;
-    }
-public:
-    static WFSIDCCARDDATA** wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) {
-        // Снимаем флаг, который мы обрабатываем отдельно.
-        XFS::ReadFlags flags = XFS::ReadFlags(forRead.value() & ~WFS_IDC_CHIP);
-        // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
-        // В первом элементе будет наш результат, во всех последующих -- прочие запрошенные
-        // данные (пустые), в поледнем NULL -- признак конца массива.
-        //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-        WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(flags.size() + 2);
-        result[0] = iccData;
-
-        for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
-            XFS::ReadFlags::type flag = (1 << i);
-            if (flags.value() & flag) {
-                //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
-                WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
-                data->wDataSource = flag;
-                data->wStatus = WFS_IDC_DATAMISSING;
-                result[i+1] = data;
-            }
-        }
-        return result;
     }
 private:
     static WFSIDCCARDDATA* translate(const SCARD_READERSTATE& state) {
@@ -241,12 +218,12 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFl
         bc::steady_clock::time_point now = bc::steady_clock::now();
         pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID, forRead)));
     } else {
-        WFSIDCCARDDATA** result = CardReadTask::wrap(read(), forRead);
+        WFSIDCCARDDATA** result = wrap(readChip(), forRead);
         // Уведомляем поставщика задачи, что она выполнена.
         XFS::Result(ReqID, handle(), WFS_SUCCESS).data(result).send(hWnd, WFS_EXECUTE_COMPLETE);
     }
 }
-WFSIDCCARDDATA* Service::read() const {
+WFSIDCCARDDATA* Service::readChip() const {
     assert(hCard != 0 && "Attempt read ATR when card not in the reader");
     //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
     WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
@@ -263,6 +240,57 @@ WFSIDCCARDDATA* Service::read() const {
     log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, ?, ?)", st);
 
     return data;
+}
+WFSIDCCARDDATA* Service::readTrack2() const {
+    assert(hCard != 0 && "Attempt read TRACK2 when card not in the reader");
+    assert(mSettings.track2.report == true && "Attempt read TRACK2 when setting Track2.Report is false");
+
+    std::size_t size = mSettings.track2.value.size();
+    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
+    data->wDataSource  = WFS_IDC_TRACK2;
+    data->wStatus      = size != 0 ? WFS_IDC_DATAOK : WFS_IDC_DATAMISSING;
+    if (size != 0) {
+        data->ulDataLength = size;
+        data->lpbData      = XFS::allocArr<BYTE>(size);
+        std::memcpy(data->lpbData, mSettings.track2.value.c_str(), size);
+    }
+    return data;
+}
+
+WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) const {
+    assert((forRead.value() & WFS_IDC_CHIP) && "Service::wrap: Chip data not requested");
+    // Снимаем флаг, который мы обрабатываем отдельно.
+    // XFS::ReadFlags flags = XFS::ReadFlags(forRead.value() & ~WFS_IDC_CHIP);
+    // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
+    // В первом элементе будет наш результат, во всех последующих -- прочие запрошенные
+    // данные (пустые), в поледнем NULL -- признак конца массива.
+    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(forRead.size() + 1);
+    // result[0] = iccData;
+
+    for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
+        XFS::ReadFlags::type flag = (1 << i);
+        if (forRead.value() & flag) {
+            {XFS::Logger l(mSettings.readerName); l.ss << std::string("Read ") << XFS::ReadFlags(flag); }
+            if (flag == WFS_IDC_CHIP) {
+                result[i] = iccData;
+            } else
+            // Kalignite требует, чтобы track2 мог читаться устройством, иначе он падает.
+            // Поэтому, если такая информация запрошена и у нас в настройках сказано ее отдать,
+            // то эмулируем ее наличие.
+            if (flag == WFS_IDC_TRACK2 && mSettings.track2.report) {
+                result[i] = readTrack2();
+            } else {
+                //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+                WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
+                data->wDataSource = flag;
+                data->wStatus = WFS_IDC_DATASRCNOTSUPP;
+                result[i] = data;
+            }
+        }
+    }
+    return result;
 }
 std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) const {
     assert(input != NULL && "Service::transmit: No input from XFS subsystem");
