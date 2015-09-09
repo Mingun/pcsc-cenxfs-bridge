@@ -140,7 +140,7 @@ namespace XFS {
         void send(HWND hWnd, DWORD messageType) {
             assert(pResult != NULL);
             std::stringstream ss;
-            ss << std::string("Result::send(hWnd=") << hWnd << ", type=" << MsgType(messageType)
+            ss << std::string("[PCSC] Result::send(hWnd=") << hWnd << ", type=" << MsgType(messageType)
                << ") with result " << Status(pResult->hResult) << " for ReqID=" << pResult->RequestID;
             WFMOutputTraceData((LPSTR)ss.str().c_str());
             PostMessage(hWnd, messageType, NULL, (LPARAM)pResult);

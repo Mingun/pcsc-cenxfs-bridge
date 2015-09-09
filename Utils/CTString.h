@@ -24,7 +24,7 @@ public:
 };
 
 template<class OS>
-inline OS& operator<<(OS& os, CTString s) {
+inline OS& operator<<(OS& os, const CTString& s) {
     if (s.isValid())
         return os << s.begin();
     return os;

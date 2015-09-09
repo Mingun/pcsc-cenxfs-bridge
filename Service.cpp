@@ -311,7 +311,7 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
     result->lpbChipData = XFS::allocArr<BYTE>(result->ulChipDataLength);
     //TODO: Убедится в выравнивании!
     SCARD_IO_REQUEST ioRq = {input->wChipProtocol, sizeof(SCARD_IO_REQUEST)};
-    // TODO: Обработать специальный случай. Ниже выдерэжка из документации для длины передаваемых данных:
+    // TODO: Обработать специальный случай. Ниже выдержка из документации для длины передаваемых данных:
     //    For T=0, in the special case where no data is sent to the card and no data expected in return,
     //    this length must reflect that the bP3 member is not being sent; the length should be
     //    `sizeof(CmdBytes) - sizeof(BYTE)`.

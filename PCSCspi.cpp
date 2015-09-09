@@ -366,7 +366,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
 
     switch (dwCommand) {
         // Ожидание вставки карты с указанным таймаутом, немедленное чтение треков согласно форме,
-        // переданой в парметре. Так как мы не умеем читать треки, то команда не поддерживается.
+        // переданой в параметре. Так как мы не умеем читать треки, то команда не поддерживается.
         case WFS_CMD_IDC_READ_TRACK: {
             //LPSTR formName = (LPSTR)lpCmdData;
             return WFS_ERR_UNSUPP_COMMAND;
@@ -404,9 +404,9 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
                 return WFS_ERR_INVALID_POINTER;
             }
             // Битовая маска с данными, которые должны быть прочитаны.
-            WORD lpwReadData = *((WORD*)lpCmdData);
-            if (lpwReadData & WFS_IDC_CHIP) {
-                pcsc.get(hService).asyncRead(dwTimeOut, hWnd, ReqID, lpwReadData);
+            XFS::ReadFlags readData = *((WORD*)lpCmdData);
+            if (readData.value() & WFS_IDC_CHIP) {
+                pcsc.get(hService).asyncRead(dwTimeOut, hWnd, ReqID, readData);
                 return WFS_SUCCESS;
             }
             return WFS_ERR_UNSUPP_COMMAND;

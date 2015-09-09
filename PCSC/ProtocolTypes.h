@@ -24,10 +24,10 @@ namespace PCSC {
         inline ProtocolTypes(DWORD flags) : _Base(flags) {}
         inline WORD translate() {
             WORD result = 0;
-            if (value() & (1 << 0)) {// Нулевой бит -- протокол T0
+            if (value() & SCARD_PROTOCOL_T0) {// Нулевой бит -- протокол T0
                 result |= WFS_IDC_CHIPT0;
             }
-            if (value() & (1 << 1)) {// Первый бит -- протокол T1
+            if (value() & SCARD_PROTOCOL_T1) {// Первый бит -- протокол T1
                 result |= WFS_IDC_CHIPT1;
             }
             return result;
