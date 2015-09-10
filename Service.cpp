@@ -299,23 +299,26 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
     WFSIDCCHIPIO* result = XFS::alloc<WFSIDCCHIPIO>();
     result->wChipProtocol = input->wChipProtocol;
 
-    //TODO: Вообще говоря, это только протокол T0
-    // const SCARD_T0_COMMAND* cmd = (SCARD_T0_COMMAND*)input->lpbChipData;
-    // Последний байт данных -- это ожидаемая длина ответа в байтах.
-    // При этом число 0x00 означает длину 256.
-    // char expectedRsLen = input->lpbChipData[input->ulChipDataLength-1];
-    // 2 байта на код ответа, остально -- на сам ответ чипа.
+    std::size_t inputSize = input->ulChipDataLength;
+    if (mSettings.workarounds.correctChipIO && input->wChipProtocol == WFS_IDC_CHIPT0) {
+        // Команду получения результата Kalignite передает правильно, без ненужного довеска.
+        // Эта комана состоит всего из 4 байт, т.е. даже не содержит поля со своей длиной.
+        // Так как он в принципе формирует данную команду, непонятно, зачем же он для других
+        // команд передает лишний байт.
+        if (inputSize > sizeof(SCARD_T0_COMMAND)) {
+            const SCARD_T0_COMMAND* cmd = (SCARD_T0_COMMAND*)input->lpbChipData;
+            // bP3 содержит размер передаваемых чипу данных
+            inputSize = sizeof(SCARD_T0_COMMAND) + cmd->bP3;
+        }
+    }
+    // 2 байта на код ответа, остальное -- на сам ответ чипа.
     result->ulChipDataLength = 256 + 2;
     // TODO: Сколько памяти выделять под буфер? Для протокола T0 нужно минимум 2 под код ответа.
     result->lpbChipData = XFS::allocArr<BYTE>(result->ulChipDataLength);
     //TODO: Убедится в выравнивании! Необходимо выравнивание на двойное слово!
     SCARD_IO_REQUEST ioRq = {input->wChipProtocol, sizeof(SCARD_IO_REQUEST)};
-    // TODO: Обработать специальный случай. Ниже выдержка из документации для длины передаваемых данных:
-    //    For T=0, in the special case where no data is sent to the card and no data expected in return,
-    //    this length must reflect that the bP3 member is not being sent; the length should be
-    //    `sizeof(CmdBytes) - sizeof(BYTE)`.
     PCSC::Status st = SCardTransmit(hCard,
-        &ioRq, input->lpbChipData, input->ulChipDataLength,
+        &ioRq, input->lpbChipData, inputSize,
         NULL, result->lpbChipData, &result->ulChipDataLength
     );
     log("SCardTransmit", st);
