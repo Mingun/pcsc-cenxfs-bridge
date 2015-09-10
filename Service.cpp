@@ -308,7 +308,7 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
     result->ulChipDataLength = 256 + 2;
     // TODO: Сколько памяти выделять под буфер? Для протокола T0 нужно минимум 2 под код ответа.
     result->lpbChipData = XFS::allocArr<BYTE>(result->ulChipDataLength);
-    //TODO: Убедится в выравнивании!
+    //TODO: Убедится в выравнивании! Необходимо выравнивание на двойное слово!
     SCARD_IO_REQUEST ioRq = {input->wChipProtocol, sizeof(SCARD_IO_REQUEST)};
     // TODO: Обработать специальный случай. Ниже выдержка из документации для длины передаваемых данных:
     //    For T=0, in the special case where no data is sent to the card and no data expected in return,
