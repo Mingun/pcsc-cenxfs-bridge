@@ -38,7 +38,7 @@ public:
     }
 private:
     static WFSIDCCARDDATA* translate(const SCARD_READERSTATE& state) {
-        //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+        //TODO: Возможно, необходимо выделять память через WFSAllocateMore
         WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
         // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
         data->wDataSource = WFS_IDC_CHIP;
@@ -142,7 +142,7 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
         log("SCardStatus", st);
     }
     bool hasCard = hCard != 0 && st;
-    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCSTATUS* lpStatus = XFS::alloc<WFSIDCSTATUS>();
     // Набор флагов, определяющих состояние устройства. Наше устройство всегда на связи,
     // т.к. в противном случае при открытии сессии с PC/SC драйвером будет ошибка.
@@ -161,7 +161,7 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
     return std::make_pair(lpStatus, st);
 }
 std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
-    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCAPS* lpCaps = XFS::alloc<WFSIDCCAPS>();
 
     // Получаем поддерживаемые картой протоколы.
@@ -225,7 +225,7 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFl
 }
 WFSIDCCARDDATA* Service::readChip() const {
     assert(hCard != 0 && "Attempt read ATR when card not in the reader");
-    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
     data->wDataSource = WFS_IDC_CHIP;
@@ -246,7 +246,7 @@ WFSIDCCARDDATA* Service::readTrack2() const {
     assert(mSettings.track2.report == true && "Attempt read TRACK2 when setting Track2.Report is false");
 
     std::size_t size = mSettings.track2.value.size();
-    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
     data->wDataSource  = WFS_IDC_TRACK2;
     data->wStatus      = size != 0 ? WFS_IDC_DATAOK : WFS_IDC_DATAMISSING;
@@ -265,7 +265,7 @@ WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) 
     // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
     // В первом элементе будет наш результат, во всех последующих -- прочие запрошенные
     // данные (пустые), в поледнем NULL -- признак конца массива.
-    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(forRead.size() + 1);
     // result[0] = iccData;
 
@@ -281,7 +281,7 @@ WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) 
             if (flag == WFS_IDC_TRACK2 && mSettings.track2.report) {
                 result[i] = readTrack2();
             } else {
-                //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+                //TODO: Возможно, необходимо выделять память через WFSAllocateMore
                 WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
                 data->wDataSource = flag;
                 data->wStatus = WFS_IDC_DATASRCNOTSUPP;
@@ -295,7 +295,7 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
     assert(input != NULL && "Service::transmit: No input from XFS subsystem");
     assert(hCard != 0 && "Service::transmit: No card in reader");
 
-    //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+    //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCHIPIO* result = XFS::alloc<WFSIDCCHIPIO>();
     result->wChipProtocol = input->wChipProtocol;
 
