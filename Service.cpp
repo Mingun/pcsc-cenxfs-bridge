@@ -272,7 +272,6 @@ WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) 
     for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
         XFS::ReadFlags::type flag = (1 << i);
         if (forRead.value() & flag) {
-            {XFS::Logger l(mSettings.readerName); l.ss << std::string("Read ") << XFS::ReadFlags(flag); }
             if (flag == WFS_IDC_CHIP) {
                 result[i] = iccData;
             } else
