@@ -269,24 +269,26 @@ WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) 
     WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(forRead.size() + 1);
     // result[0] = iccData;
 
+    std::size_t j = 0;
     for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
         XFS::ReadFlags::type flag = (1 << i);
         if (forRead.value() & flag) {
             if (flag == WFS_IDC_CHIP) {
-                result[i] = iccData;
+                result[j] = iccData;
             } else
             // Kalignite требует, чтобы track2 мог читаться устройством, иначе он падает.
             // Поэтому, если такая информация запрошена и у нас в настройках сказано ее отдать,
             // то эмулируем ее наличие.
             if (flag == WFS_IDC_TRACK2 && mSettings.track2.report) {
-                result[i] = readTrack2();
+                result[j] = readTrack2();
             } else {
                 //TODO: Возможно, необходимо выделять память через WFSAllocateMore
                 WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
                 data->wDataSource = flag;
                 data->wStatus = WFS_IDC_DATASRCNOTSUPP;
-                result[i] = data;
+                result[j] = data;
             }
+            ++j;
         }
     }
     return result;
