@@ -133,7 +133,7 @@ namespace XFS {
             assert(pResult != NULL);
             assert(pResult->lpBuffer == NULL && "Result already has data!");
             pResult->u.dwEventID = WFS_SRVE_IDC_MEDIADETECTED;
-            //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+            //TODO: Возможно, необходимо выделять память через WFSAllocateMore
             pResult->lpBuffer = XFS::alloc<DWORD>(WFS_IDC_CARDREADPOSITION);
             return *this;
         }

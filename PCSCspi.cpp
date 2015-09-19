@@ -279,7 +279,6 @@ HRESULT SPI_API WFPUnlock(HSERVICE hService, HWND hWnd, REQUESTID ReqID) {
     // WFS_ERR_INVALID_HSERVICE   The hService parameter is not a valid service handle.
     // WFS_ERR_INVALID_HWND       The hWnd parameter is not a valid window handle.
 
-    //TODO: Послать окну hWnd сообщение с кодом WFS_UNLOCK_COMPLETE и wParam = WFSRESULT;
     return WFS_SUCCESS;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -339,7 +338,7 @@ HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
     // WFS_ERR_INVALID_HWND       The hWnd parameter is not a valid window handle.
     // WFS_ERR_INVALID_POINTER    A pointer parameter does not point to accessible memory.
     // WFS_ERR_UNSUPP_CATEGORY    The dwCategory issued, although valid for this service class, is not supported by this service provider.
-    //TODO: Послать окну hWnd сообщение с кодом WFS_GETINFO_COMPLETE и wParam = WFSRESULT;
+
     return WFS_SUCCESS;
 }
 /** Посылает команду для выполнения карточным ридером.
@@ -430,12 +429,9 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
         }
         // Отключает питание чипа.
         case WFS_CMD_IDC_RESET: {
-            if (lpCmdData == NULL) {
-                return WFS_ERR_INVALID_POINTER;
-            }
-            // Битовая маска 
-            WORD wResetIn = *((WORD*)lpCmdData);
-            //TODO: Реализовать команду
+            // Битовая маска. NULL означает, что провайдер сам решает, что делать.
+            WORD wResetIn = lpCmdData ? *((WORD*)lpCmdData) : WFS_IDC_NOACTION;
+            //TODO: Реализовать команду WFS_CMD_IDC_RESET
             return WFS_ERR_INTERNAL_ERROR;
         }
         case WFS_CMD_IDC_CHIP_POWER: {

@@ -47,13 +47,13 @@ namespace PCSC {
     /// Функтор, создающий результат уведомления о появлении нового устройства каждому заинтересованному слушателю.
     class DeviceDetected : public Event {
         /// Состояние вновь подключившигося устройства.
-        /// TODO: Сделать копию объекта? Вдруг считыватель исчезнит прежде, чем успеем послать сообщение?
+        /// TODO: Сделать копию объекта? Вдруг считыватель исчезнет прежде, чем успеем послать сообщение?
         const SCARD_READERSTATE& state;
     public:
         DeviceDetected(const Service& service, const SCARD_READERSTATE& state) : Event(service), state(state) {}
         XFS::Result operator()() const {
             WFMOutputTraceData("Create DeviceDetected event");
-            //TODO: Возможно, необходимо выделять память черех WFSAllocateMore
+            //TODO: Возможно, необходимо выделять память через WFSAllocateMore
             WFSDEVSTATUS* status = XFS::alloc<WFSDEVSTATUS>();
             // Имя физичеcкого устройства, чье состояние изменилось
             status->lpszPhysicalName = (LPSTR)XFS::Str(state.szReader).begin();
