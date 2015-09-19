@@ -5,12 +5,10 @@
 
 #include "Service.h"
 #include "XFS/Result.h"
+#include "XFS/Logger.h"
 // Для XFS::Str
 #include "XFS/Memory.h"
 #include "PCSC/ReaderState.h"
-
-// CEN/XFS API -- Для WFMOutputTraceData
-#include <xfsadmin.h>
 
 namespace PCSC {
     /// Базовый класс для всех событий, генерируемых подсистемой PC/SC и транслируемых в XFS.
@@ -31,7 +29,7 @@ namespace PCSC {
     public:
         CardInserted(const Service& service) : Event(service) {}
         XFS::Result operator()() const {
-            WFMOutputTraceData("Create CardInserted event");
+            XFS::Logger() << "Create CardInserted event";
             return success().cardInserted();
         }
     };
@@ -40,7 +38,7 @@ namespace PCSC {
     public:
         CardRemoved(const Service& service) : Event(service) {}
         XFS::Result operator()() const {
-            WFMOutputTraceData("Create CardRemoved event");
+            XFS::Logger() << "Create CardRemoved event";
             return success().cardRemoved();
         }
     };
@@ -52,7 +50,7 @@ namespace PCSC {
     public:
         DeviceDetected(const Service& service, const SCARD_READERSTATE& state) : Event(service), state(state) {}
         XFS::Result operator()() const {
-            WFMOutputTraceData("Create DeviceDetected event");
+            XFS::Logger() << "Create DeviceDetected event";
             //TODO: Возможно, необходимо выделять память через WFSAllocateMore
             WFSDEVSTATUS* status = XFS::alloc<WFSDEVSTATUS>();
             // Имя физичеcкого устройства, чье состояние изменилось

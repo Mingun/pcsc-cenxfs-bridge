@@ -1,5 +1,6 @@
 #include "Service.h"
 
+#include "XFS/Logger.h"
 #include "XFS/Memory.h"
 #include "Manager.h"
 #include "PCSC/MediaStatus.h"
@@ -14,9 +15,6 @@
 #include <cstring>
 // Для работы с текущим временем, для получения времени дедлайна.
 #include <boost/chrono/chrono.hpp>
-
-// CEN/XFS API -- Для WFMOutputTraceData
-#include <xfsadmin.h>
 
 class CardReadTask : public Task {
     /// Данные, которые должны быть прочитаны.
@@ -59,8 +57,7 @@ Service::Service(Manager& pcsc, HSERVICE hService, const Settings& settings)
     , dwActiveProtocol(0)
     , mSettings(settings)
 {
-    std::string json = "[PCSC] Settings: " + settings.toJSONString();
-    WFMOutputTraceData((LPSTR)json.c_str());
+    {XFS::Logger() << "Settings: " << settings.toJSONString();}
     // Сразу пытаемся открыть карту, вдруг она уже в считывателе.
     // Это нужно для того, чтобы функция getStatus корректно возвращали признак
     // наличия карточки.
@@ -329,7 +326,5 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Service::log(std::string operation, PCSC::Status st) const {
-    std::stringstream ss;
-    ss << std::string("[PCSC='") << mSettings.readerName << "'] " << operation << ": " << st;
-    WFMOutputTraceData((LPSTR)ss.str().c_str());
+    XFS::Logger() << "[PCSC='" << mSettings.readerName << "'] " << operation << ": " << st;
 }

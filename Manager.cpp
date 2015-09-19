@@ -5,12 +5,13 @@
 
 #include "Service.h"
 #include "Settings.h"
+#include "XFS/Logger.h"
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
 Manager::Manager() : stopRequested(false) {
     // Создаем контекст.
     PCSC::Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
-    log("SCardEstablishContext", st);
+    XFS::Logger() << "SCardEstablishContext: " << st;
     // Запускаем поток ожидания изменений от системы PC/SC -- добавление и удаление
     // считывателей и карточек.
     waitChangesThread.reset(new boost::thread(&Manager::waitChangesRun, this));
@@ -29,7 +30,7 @@ Manager::~Manager() {
     }
     services.clear();
     PCSC::Status st = SCardReleaseContext(hContext);
-    log("SCardReleaseContext", st);
+    XFS::Logger() << "SCardReleaseContext: " << st;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Service& Manager::create(HSERVICE hService, const Settings& settings) {
@@ -73,19 +74,19 @@ bool Manager::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventCla
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Manager::waitChangesRun() {
-    WFMOutputTraceData("Reader changes dispatch thread runned");
+    {XFS::Logger() << "Reader changes dispatch thread runned";}
     // Первоначально состояние неизвестное нам.
     DWORD readersState = SCARD_STATE_UNAWARE;
     while (!stopRequested) {
         // На входе текущее состояние считывателей -- на выходе новое состояние.
         readersState = getReadersAndWaitChanges(readersState);
     }
-    WFMOutputTraceData("Reader changes dispatch thread stopped");
+    XFS::Logger() << "Reader changes dispatch thread stopped";
 }
 /// Получаем список имен считывателей из строки со всеми именами, разделенными символом '\0'.
 std::vector<const char*> getReaderNames(const std::vector<char>& readerNames) {
-    std::stringstream ss;
-    ss << std::string("Avalible readers:");
+    XFS::Logger l;
+    l << "Avalible readers:";
     std::size_t i = 0;
     std::size_t k = 0;
     std::vector<const char*> names;
@@ -98,18 +99,17 @@ std::vector<const char*> getReaderNames(const std::vector<char>& readerNames) {
         ++i;
 
         if (i < size) {
-            ss << std::endl << ++k << ": " << name;
+            l << '\n' << ++k << ": " << name;
             names.push_back(name);
         }
     }
-    WFMOutputTraceData((LPSTR)ss.str().c_str());
     return names;
 }
 DWORD Manager::getReadersAndWaitChanges(DWORD readersState) {
     DWORD readersCount = 0;
     // Определяем доступные считыватели: сначало количество, затем сами считыватели.
     PCSC::Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
-    log("SCardListReaders(get readers count)", st);
+    {XFS::Logger() << "SCardListReaders(get readers count): " << st;}
 
     // Получаем имена доступных считывателей. Все имена расположены в одной строке,
     // разделены символом '\0' в в конце списка также символ '\0' (т.о. в конце массива
@@ -117,7 +117,7 @@ DWORD Manager::getReadersAndWaitChanges(DWORD readersState) {
     std::vector<char> readerNames(readersCount);
     if (readersCount != 0) {
         st = SCardListReaders(hContext, NULL, &readerNames[0], &readersCount);
-        log("SCardListReaders(get readers)", st);
+        XFS::Logger() << "SCardListReaders(get readers): " << st;
     }
 
     std::vector<const char*> names = getReaderNames(readerNames);
@@ -151,7 +151,7 @@ bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
     // Ждем его до бесконечности.
     PCSC::Status st = SCardGetStatusChange(hContext, tasks.getTimeout(), &readers[0], (DWORD)readers.size());
-    log("SCardGetStatusChange", st);
+    {XFS::Logger() << "SCardGetStatusChange: " << st;}
     // Если изменение вызвано таймаутом операции, выкидываем из очереди ожидания все
     // задачи, чей таймаут уже наступил
     if (st.value() == SCARD_E_TIMEOUT) {
@@ -190,7 +190,7 @@ void Manager::addTask(const Task::Ptr& task) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
         PCSC::Status st = SCardCancel(hContext);
-        log("SCardCancel(addTask)", st);
+        XFS::Logger() << "SCardCancel(addTask): " << st;
     }
 }
 bool Manager::cancelTask(HSERVICE hService, REQUESTID ReqID) {
@@ -198,14 +198,8 @@ bool Manager::cancelTask(HSERVICE hService, REQUESTID ReqID) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
         PCSC::Status st = SCardCancel(hContext);
-        log("SCardCancel(cancelTask)", st);
+        XFS::Logger() << "SCardCancel(cancelTask): " << st;
         return true;
     }
     return false;
-}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void Manager::log(std::string operation, PCSC::Status st) {
-    std::stringstream ss;
-    ss << operation << ": " << st;
-    WFMOutputTraceData((LPSTR)ss.str().c_str());
 }

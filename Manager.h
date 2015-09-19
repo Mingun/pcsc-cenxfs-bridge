@@ -100,8 +100,6 @@ private:// Опрос изменений
     */
     bool waitChanges(std::vector<SCARD_READERSTATE>& readers);
     void notifyChanges(const SCARD_READERSTATE& state);
-private:
-    static void log(std::string operation, PCSC::Status st);
 };
 
 #endif // PCSC_CENXFS_BRIDGE_Manager_H

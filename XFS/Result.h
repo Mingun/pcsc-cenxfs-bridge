@@ -13,13 +13,14 @@
 #include <winuser.h>
 // Для GetSystemTime
 #include <WinBase.h>
-// Определения для ридеров карт (Identification card unit (IDC)), для WFMAllocateBuffer, WFMOutputTraceData и WFSRESULT
+// Определения для ридеров карт (Identification card unit (IDC)), для WFMAllocateBuffer и WFSRESULT
 #include <XFSIDC.h>
 
 #include "Utils/CTString.h"
 #include "Utils/Enum.h"
 #include "PCSC/Status.h"
 #include "XFS/Status.h"
+#include "XFS/Logger.h"
 #include "XFS/Memory.h"
 
 namespace XFS {
@@ -139,10 +140,8 @@ namespace XFS {
         }
         void send(HWND hWnd, DWORD messageType) {
             assert(pResult != NULL);
-            std::stringstream ss;
-            ss << std::string("[PCSC] Result::send(hWnd=") << hWnd << ", type=" << MsgType(messageType)
-               << ") with result " << Status(pResult->hResult) << " for ReqID=" << pResult->RequestID;
-            WFMOutputTraceData((LPSTR)ss.str().c_str());
+            Logger() << "Result::send(hWnd=" << hWnd << ", type=" << MsgType(messageType)
+                     << ") with result " << Status(pResult->hResult) << " for ReqID=" << pResult->RequestID;
             PostMessage(hWnd, messageType, NULL, (LPARAM)pResult);
         }
     private:
