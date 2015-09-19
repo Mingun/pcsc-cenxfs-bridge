@@ -20,14 +20,14 @@ namespace XFS {
     template<typename T>
     static T* alloc() {
         T* result = 0;
-        HRESULT h = WFMAllocateBuffer(sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
+        HRESULT h = WFMAllocateBuffer((ULONG)sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
         assert(h >= 0 && "Cannot allocate memory");
         return result;
     }
     template<typename T>
     static T* alloc(const T& value) {
         T* result = 0;
-        HRESULT h = WFMAllocateBuffer(sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
+        HRESULT h = WFMAllocateBuffer((ULONG)sizeof(T), WFS_MEM_ZEROINIT, (void**)&result);
         assert(h >= 0 && "Cannot allocate memory");
         *result = value;
         return result;
@@ -40,7 +40,7 @@ namespace XFS {
     template<typename T>
     static T* allocArr(std::size_t size) {
         T* result = 0;
-        HRESULT h = WFMAllocateBuffer(sizeof(T) * size, WFS_MEM_ZEROINIT, (void**)&result);
+        HRESULT h = WFMAllocateBuffer((ULONG)(sizeof(T) * size), WFS_MEM_ZEROINIT, (void**)&result);
         assert(h >= 0 && "Cannot allocate memory");
         return result;
     }
