@@ -303,12 +303,12 @@ HRESULT SPI_API WFPGetInfo(HSERVICE hService, DWORD dwCategory, LPVOID lpQueryDe
         case WFS_INF_IDC_STATUS: {      // Дополнительных параметров нет
             std::pair<WFSIDCSTATUS*, PCSC::Status> status = pcsc.get(hService).getStatus();
             // Получение информации о считывателе всегда успешно.
-            XFS::Result(ReqID, hService, WFS_SUCCESS).data(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
+            XFS::Result(ReqID, hService, WFS_SUCCESS).attach(status.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_CAPABILITIES: {// Дополнительных параметров нет
             std::pair<WFSIDCCAPS*, PCSC::Status> caps = pcsc.get(hService).getCaps();
-            XFS::Result(ReqID, hService, caps.second).data(caps.first).send(hWnd, WFS_GETINFO_COMPLETE);
+            XFS::Result(ReqID, hService, caps.second).attach(caps.first).send(hWnd, WFS_GETINFO_COMPLETE);
             break;
         }
         case WFS_INF_IDC_FORM_LIST:
@@ -425,7 +425,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             }
             WFSIDCCHIPIO* data = (WFSIDCCHIPIO*)lpCmdData;
             std::pair<WFSIDCCHIPIO*, PCSC::Status> result = pcsc.get(hService).transmit(data);
-            XFS::Result(ReqID, hService, result.second).data(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+            XFS::Result(ReqID, hService, result.second).attach(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
             return WFS_SUCCESS;
         }
         // Отключает питание чипа.
@@ -443,7 +443,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
                 return WFS_ERR_INVALID_POINTER;
             }
             WORD wChipPower = *((WORD*)lpCmdData);
-            //TODO: Реализовать команду
+            //TODO: Реализовать команду WFS_CMD_IDC_CHIP_POWER
             return WFS_ERR_INTERNAL_ERROR;
         }
         // Разбирает результат, ранее возвращенный командой WFS_CMD_IDC_READ_RAW_DATA. Так как мы ее

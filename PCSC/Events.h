@@ -60,7 +60,7 @@ namespace PCSC {
             // Рабочая станция, на которой запущен сервис.
             status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
             status->dwState = PCSC::ReaderState(state.dwEventState).translate();
-            return success().data(status);
+            return success().attach(status);
         }
     };
 } // namespace PCSC

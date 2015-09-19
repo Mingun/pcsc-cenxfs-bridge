@@ -71,14 +71,14 @@ namespace XFS {
         }
     public:// Заполнение результатов команд WFPGetInfo
         /// Прикрепляет к результату указанные данные статуса.
-        inline Result& data(WFSIDCSTATUS* data) {
+        inline Result& attach(WFSIDCSTATUS* data) {
             assert(pResult != NULL);
             pResult->u.dwCommandCode = WFS_INF_IDC_STATUS;
             pResult->lpBuffer = data;
             return *this;
         }
         /// Прикрепляет к результату указанные данные возможностей устройства.
-        inline Result& data(WFSIDCCAPS* data) {
+        inline Result& attach(WFSIDCCAPS* data) {
             assert(pResult != NULL);
             pResult->u.dwCommandCode = WFS_INF_IDC_CAPABILITIES;
             pResult->lpBuffer = data;
@@ -86,7 +86,7 @@ namespace XFS {
         }
     public:// Заполнение результатов команд WFPExecute
         /// Прикрепляет к результату указанные данные возможностей устройства.
-        inline Result& data(WFSIDCCARDDATA** data) {
+        inline Result& attach(WFSIDCCARDDATA** data) {
             assert(pResult != NULL);
             assert(pResult->lpBuffer == NULL && "Result already has data!");
             pResult->u.dwCommandCode = WFS_CMD_IDC_READ_RAW_DATA;
@@ -94,7 +94,7 @@ namespace XFS {
             return *this;
         }
         /// Прикрепляет к результату указанные данные возможностей устройства.
-        inline Result& data(WFSIDCCHIPIO* data) {
+        inline Result& attach(WFSIDCCHIPIO* data) {
             assert(pResult != NULL);
             assert(pResult->lpBuffer == NULL && "Result already has data!");
             pResult->u.dwCommandCode = WFS_CMD_IDC_CHIP_IO;
@@ -103,7 +103,7 @@ namespace XFS {
         }
     public:
         /// Прикрепляет к результату указанные данные возможностей устройства.
-        inline Result& data(WFSDEVSTATUS* data) {
+        inline Result& attach(WFSDEVSTATUS* data) {
             assert(pResult != NULL);
             assert(pResult->lpBuffer == NULL && "Result already has data!");
             pResult->u.dwEventID = WFS_SYSE_DEVICE_STATUS;

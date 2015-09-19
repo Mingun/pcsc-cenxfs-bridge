@@ -30,7 +30,7 @@ public:
         if (added & SCARD_STATE_PRESENT) {
             WFSIDCCARDDATA** result = mService.wrap(translate(state), mFlags);
             // Уведомляем поставщика задачи, что она выполнена.
-            XFS::Result(ReqID, serviceHandle(), WFS_SUCCESS).data(result).send(hWnd, WFS_EXECUTE_COMPLETE);
+            XFS::Result(ReqID, serviceHandle(), WFS_SUCCESS).attach(result).send(hWnd, WFS_EXECUTE_COMPLETE);
             // Задача обработана, можно удалять из списка.
             return true;
         }
@@ -220,7 +220,7 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFl
     } else {
         WFSIDCCARDDATA** result = wrap(readChip(), forRead);
         // Уведомляем поставщика задачи, что она выполнена.
-        XFS::Result(ReqID, handle(), WFS_SUCCESS).data(result).send(hWnd, WFS_EXECUTE_COMPLETE);
+        XFS::Result(ReqID, handle(), WFS_SUCCESS).attach(result).send(hWnd, WFS_EXECUTE_COMPLETE);
     }
 }
 WFSIDCCARDDATA* Service::readChip() const {

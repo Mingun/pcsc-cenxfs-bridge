@@ -7,7 +7,7 @@
 #include "XFS/Result.h"
 
 void Task::complete(HRESULT result) const {
-    XFS::Result(ReqID, serviceHandle(), result).data((WFSIDCCARDDATA**)0).send(hWnd, WFS_EXECUTE_COMPLETE);
+    XFS::Result(ReqID, serviceHandle(), result).attach((WFSIDCCARDDATA**)0).send(hWnd, WFS_EXECUTE_COMPLETE);
 }
 HSERVICE Task::serviceHandle() const {
     return mService.handle();
