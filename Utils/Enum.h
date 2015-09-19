@@ -21,10 +21,11 @@ protected:
     T mValue;
     template<class OS>
     friend inline OS& operator<<(OS& os, Enum<T, Derived> e) {
-        return os << e.derived().name() << " (0x"
-                  // На каждый байт требуется 2 символа.
-                  << std::hex << std::setw(2*sizeof(e.mValue)) << std::setfill('0')
-                  << e.mValue << ")";
+        os << e.derived().name() << " (0x"
+           // На каждый байт требуется 2 символа.
+           << std::hex << std::setw(2*sizeof(e.mValue)) << std::setfill('0')
+           << e.mValue << ")";
+        return os;
     }
 protected:
     Enum(T value) : mValue(value) {}

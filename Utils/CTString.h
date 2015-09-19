@@ -14,7 +14,7 @@ class CTString {
 public:
     inline CTString() : mBegin(0), mEnd(0) {}
     template<std::size_t N>
-    inline CTString(const char (&data)[N]) : mBegin(data), mEnd(data + N) {}
+    inline explicit CTString(const char (&data)[N]) : mBegin(data), mEnd(data + N) {}
 
     inline std::size_t size() const { return mEnd - mBegin; }
     inline bool empty() const { return size() == 0; }
@@ -25,8 +25,9 @@ public:
 
 template<class OS>
 inline OS& operator<<(OS& os, const CTString& s) {
-    if (s.isValid())
-        return os << s.begin();
+    if (s.isValid()) {
+        os << s.begin();
+    }
     return os;
 }
 #endif // PCSC_CENXFS_BRIDGE_Utils_CTString_H

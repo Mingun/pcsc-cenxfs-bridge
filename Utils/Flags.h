@@ -35,14 +35,15 @@ protected:
             if (!it->isValid())
                 continue;
             if (!first) {
-                os << ", ";
+                os << " | ";
             }
             os << *it;
             first = false;
         }
+        os << ')';
         // Восстанавливаем флаги форматирования
         os.flags(ff);
-        return os << ')';
+        return os;
     }
 protected:
     Flags(T value) : mValue(value) {}
