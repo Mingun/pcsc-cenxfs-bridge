@@ -1,10 +1,11 @@
 #include "Task.h"
 
-#include <sstream>
-#include <cassert>
-
 #include "Service.h"
+
 #include "XFS/Result.h"
+
+#include <cassert>
+#include <sstream>
 
 void Task::complete(HRESULT result) const {
     XFS::Result(ReqID, serviceHandle(), result).attach((WFSIDCCARDDATA**)0).send(hWnd, WFS_EXECUTE_COMPLETE);

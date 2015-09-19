@@ -3,11 +3,11 @@
 
 #pragma once
 
+#include "Utils/CTString.h"
+
 // Для std::size_t
 #include <cstddef>
 #include <iomanip>
-
-#include "Utils/CTString.h"
 
 /** Класс для типобезопасного представления перечислений.
 @tparam T Тип для хранения значений перечисления.

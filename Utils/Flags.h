@@ -3,12 +3,13 @@
 
 #pragma once
 
-#include <vector>
+#include "Utils/CTString.h"
+
+#include <cassert>
 // Для std::size_t
 #include <cstddef>
 #include <iomanip>
-
-#include "Utils/CTString.h"
+#include <vector>
 
 /** Класс для типобезопасного представления флагов, с возможностью преобразования флагов в
     текстовый вид.

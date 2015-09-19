@@ -3,17 +3,15 @@
 
 #pragma once
 
+#include "XFS/Result.h"
+
+#include <cassert>
 #include <set>
 #include <vector>
 // Для std::pair
 #include <utility>
-#include <cassert>
 // Для HWND и DWORD
 #include <windef.h>
-// Для PostMessage
-#include <winuser.h>
-
-#include "XFS/Result.h"
 
 class EventSubscriber {
     /// Окно, которое должно получать указанные события.

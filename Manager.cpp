@@ -1,11 +1,12 @@
 #include "Manager.h"
 
-#include <sstream>
-#include <cassert>
-
 #include "Service.h"
 #include "Settings.h"
+
 #include "XFS/Logger.h"
+
+#include <sstream>
+#include <cassert>
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
 Manager::Manager() : stopRequested(false) {

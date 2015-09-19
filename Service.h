@@ -3,17 +3,22 @@
 
 #pragma once
 
-#include <string>
-
-// CEN/XFS API
+// CEN/XFS API -- Должно быть сверху, т.к., если поместить
 #include <xfsapi.h>
-// PC/CS API
-#include <winscard.h>
 
 #include "EventSupport.h"
 #include "Settings.h"
+
 #include "PCSC/Status.h"
+
 #include "XFS/ReadFlags.h"
+
+#include <string>
+// CEN/XFS API -- Должно быть сверху, т.к., если поместить здесь,
+// то начинаются странные ошибки компиляции из winnt.h как минимум в MSVC 2005.
+//#include <xfsapi.h>
+// PC/CS API
+#include <winscard.h>
 
 class Manager;
 class Service : public EventNotifier {

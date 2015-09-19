@@ -3,11 +3,11 @@
 
 #pragma once
 
-// Для HRESULT и LONG
-#include <windef.h>
-
 #include "Utils/CTString.h"
 #include "Utils/Enum.h"
+
+// Для HRESULT и LONG
+#include <windef.h>
 
 namespace PCSC {
     /** Результат выполнения PC/SC функций. */

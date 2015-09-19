@@ -6,7 +6,7 @@ del /F *.obj *.dll *.lib *.exp
 
 :build
 cl /LD /EHsc /FePCSCspi ^
-	-D_WIN32_WINNT=0x0501 -DDEBUG ^
+	-D_WIN32_WINNT=0x0501 -DWIN32_LEAN_AND_MEAN -DDEBUG ^
 	/I"%XFS_SDK%\INCLUDE" ^
 	/I"%BOOST_ROOT%" ^
 	*.cpp ^

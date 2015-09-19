@@ -3,9 +3,18 @@
 
 #pragma once
 
-#include <string>
-#include <sstream>
+#include "Utils/CTString.h"
+#include "Utils/Enum.h"
+
+#include "PCSC/Status.h"
+
+#include "XFS/Logger.h"
+#include "XFS/Memory.h"
+#include "XFS/Status.h"
+
 #include <cassert>
+#include <sstream>
+#include <string>
 
 // Для REQUESTID, HSERVICE, HRESULT, LONG и DWORD
 #include <windef.h>
@@ -13,15 +22,8 @@
 #include <winuser.h>
 // Для GetSystemTime
 #include <WinBase.h>
-// Определения для ридеров карт (Identification card unit (IDC)), для WFMAllocateBuffer и WFSRESULT
+// Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
-
-#include "Utils/CTString.h"
-#include "Utils/Enum.h"
-#include "PCSC/Status.h"
-#include "XFS/Status.h"
-#include "XFS/Logger.h"
-#include "XFS/Memory.h"
 
 namespace XFS {
     class MsgType : public Enum<DWORD, MsgType> {

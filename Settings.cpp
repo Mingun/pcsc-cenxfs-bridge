@@ -1,12 +1,11 @@
-
 #include "Settings.h"
+
+#include "XFS/Logger.h"
 
 #include <string>
 #include <vector>
 // XFS API для функций доступа к реестру.
 #include <xfsconf.h>
-
-#include "XFS/Logger.h"
 
 /// Класс для автоматического закрытия открытых ключей реестра, когда они более не нужны.
 class RegKey {

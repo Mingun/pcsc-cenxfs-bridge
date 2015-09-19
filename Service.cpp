@@ -1,18 +1,20 @@
 #include "Service.h"
 
+#include "Manager.h"
+
+#include "PCSC/Events.h"
+#include "PCSC/MediaStatus.h"
+#include "PCSC/ProtocolTypes.h"
+#include "PCSC/ReaderState.h"
+
 #include "XFS/Logger.h"
 #include "XFS/Memory.h"
-#include "Manager.h"
-#include "PCSC/MediaStatus.h"
-#include "PCSC/ReaderState.h"
-#include "PCSC/ProtocolTypes.h"
-#include "PCSC/Events.h"
 
-#include <string>
-#include <sstream>
 #include <cassert>
 // Для std::memcpy
 #include <cstring>
+#include <sstream>
+#include <string>
 // Для работы с текущим временем, для получения времени дедлайна.
 #include <boost/chrono/chrono.hpp>
 

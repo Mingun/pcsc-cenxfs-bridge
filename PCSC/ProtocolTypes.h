@@ -3,18 +3,16 @@
 
 #pragma once
 
+#include "Utils/CTString.h"
+#include "Utils/Flags.h"
+
 #include <vector>
-// Для std::size_t
-#include <cstddef>
 // Для DWORD
 #include <windef.h>
 // PC/CS API
 #include <winscard.h>
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
-
-#include "Utils/CTString.h"
-#include "Utils/Flags.h"
 
 namespace PCSC {
     class ProtocolTypes : public Flags<DWORD, ProtocolTypes> {

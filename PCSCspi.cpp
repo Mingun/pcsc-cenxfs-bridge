@@ -1,26 +1,24 @@
-// Отлючаем ненужную функциональность, из windows.h, который инклудится в XFSIDC.h
-#define WIN32_LEAN_AND_MEAN
-// Предполагаем, что будем пользоваться возможностями Windows XP.
-#define _WIN32_WINNT 0x0501
+#include "Manager.h"
+#include "Service.h"
+#include "Settings.h"
+
+#include "PCSC/Status.h"
+
+#include "XFS/Result.h"
+
+// Для strncpy.
+#include <cstring>
+// Для std::size_t.
+#include <cstddef>
+// Для std::pair
+#include <utility>
+#include <vector>
+
 // CEN/XFS API -- Наш файл, так как оригинальный предназначен для использования
 // клиентами, а нам надо экспортировать функции, а не импортировать их.
 #include "xfsspi.h"
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
-// Для std::pair
-#include <utility>
-// Для strncpy.
-#include <cstring>
-// Для std::size_t.
-#include <cstddef>
-
-#include <vector>
-
-#include "PCSC/Status.h"
-#include "XFS/Result.h"
-#include "Manager.h"
-#include "Service.h"
-#include "Settings.h"
 
 // Линкуемся с библиотекой реализации стандарта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")

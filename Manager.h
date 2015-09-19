@@ -3,24 +3,26 @@
 
 #pragma once
 
+#include "Task.h"
+
+#include "PCSC/Status.h"
+
+#include "XFS/Result.h"
+
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/shared_ptr.hpp>
 
 #include <boost/chrono/chrono.hpp>
+
+#include <boost/shared_ptr.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/thread.hpp>
 
 // PC/CS API
 #include <winscard.h>
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
-
-#include "PCSC/Status.h"
-#include "XFS/Result.h"
-#include "Task.h"
 
 // Линкуемся с библиотекой реализации стандарта PC/SC в Windows
 #pragma comment(lib, "winscard.lib")

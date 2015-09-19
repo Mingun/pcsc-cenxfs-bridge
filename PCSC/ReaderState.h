@@ -3,18 +3,18 @@
 
 #pragma once
 
-#include <vector>
+#include "Utils/CTString.h"
+#include "Utils/Flags.h"
+
 // Для std::size_t
 #include <cstddef>
+#include <vector>
 // Для DWORD
 #include <windef.h>
 // PC/CS API
 #include <winscard.h>
 // Определения для ридеров карт (Identification card unit (IDC))
 #include <XFSIDC.h>
-
-#include "Utils/CTString.h"
-#include "Utils/Flags.h"
 
 namespace PCSC {
     /** Класс для представления состояния устройств. Позволяет преобразовать состояния в XFS

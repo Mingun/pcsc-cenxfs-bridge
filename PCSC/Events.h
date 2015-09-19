@@ -4,11 +4,16 @@
 #pragma once
 
 #include "Service.h"
-#include "XFS/Result.h"
+
+#include "PCSC/ReaderState.h"
+
 #include "XFS/Logger.h"
 // Для XFS::Str
 #include "XFS/Memory.h"
-#include "PCSC/ReaderState.h"
+#include "XFS/Result.h"
+
+// PC/CS API -- для SCARD_READERSTATE
+#include <winscard.h>
 
 namespace PCSC {
     /// Базовый класс для всех событий, генерируемых подсистемой PC/SC и транслируемых в XFS.

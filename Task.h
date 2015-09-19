@@ -3,9 +3,11 @@
 
 #pragma once
 
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/thread/lock_guard.hpp> 
+#include <boost/chrono/chrono.hpp>
+
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/lock_guard.hpp>
 
 // Контейнер для хранения задач на чтение карточки.
 #include <boost/multi_index_container.hpp>
@@ -14,8 +16,6 @@
 #include <boost/multi_index/identity.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
-
-#include <boost/chrono/chrono.hpp>
 
 // PC/CS API -- для SCARD_READERSTATE
 #include <winscard.h>

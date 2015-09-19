@@ -3,23 +3,13 @@
 
 #pragma once
 
-#include <string>
-#include <sstream>
-#include <cassert>
-
-// Для REQUESTID, HSERVICE, HRESULT, LONG и DWORD
-#include <windef.h>
-// Для PostMessage
-#include <winuser.h>
-// Для GetSystemTime
-#include <WinBase.h>
-// Коды ошибок
-#include <xfsapi.h>
-
 #include "Utils/CTString.h"
 #include "Utils/Enum.h"
-#include "PCSC/Status.h"
-#include "XFS/Memory.h"
+
+// Для DWORD
+#include <windef.h>
+// Коды ошибок
+#include <xfsapi.h>
 
 namespace XFS {
     class Status : public Enum<DWORD, Status> {

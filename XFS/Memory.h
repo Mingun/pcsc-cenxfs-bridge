@@ -3,9 +3,9 @@
 
 #pragma once
 
+#include <cassert>
 // Для std::size_t
 #include <cstddef>
-#include <cassert>
 // Для strlen и strncpy
 #include <cstring>
 // Для WFMAllocateBuffer
