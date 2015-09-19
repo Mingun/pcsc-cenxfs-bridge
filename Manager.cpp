@@ -49,7 +49,7 @@ void Manager::remove(HSERVICE hService) {
     ServiceMap::iterator it = services.find(hService);
 
     assert(it->second != NULL);
-    // Закрытие PC/SC соединения происхоидт в деструкторе Card.
+    // Закрытие PC/SC соединения происходит в деструкторе Service.
     delete it->second;
     services.erase(it);
 }
