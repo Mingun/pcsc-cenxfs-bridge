@@ -118,6 +118,7 @@ Settings::Settings(const char* serviceName, int traceLevel)
     track2.fromChip = track2Settings.dwValue("FromChip") != 0;
     track2.value = track2Settings.value();
 
+    // Настройки обходов различных проблем
     RegKey workaroundSettings = pcscSettings.child("Workarounds");
     workarounds.correctChipIO = workaroundSettings.dwValue("CorrectChipIO") != 0;
 }

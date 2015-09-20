@@ -31,7 +31,10 @@
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
 
-#define DLL_VERSION "Build: Date: " __DATE__ ", time: " __TIME__
+#define DLL_VERSION \
+    "PC/SC to CEN/XFS bridge\n" \
+    "https://bitbucket.org/Mingun/pcsc-cenxfs-bridge\n" \
+    "Build: Date: " __DATE__ ", time: " __TIME__
 
 template<std::size_t N1, std::size_t N2>
 void safecopy(char (&dst)[N1], const char (&src)[N2]) {
@@ -46,7 +49,7 @@ Manager pcsc;
 extern "C" {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-/** Пытается определить наличие считывателя с указанным в настройках (ключ PCSCReaderName) именем.
+/** Пытается определить наличие считывателя с указанным в настройках (ключ ReaderName) именем.
     Если данный ключ не указан, привязывается к первому найденному считывателю. Если в данный
     момент никаких считывателей в системе не обнаружено, ждет указанное в `dwTimeOut` время, пока
     его не подключат.
