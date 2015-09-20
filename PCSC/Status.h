@@ -8,6 +8,10 @@
 
 // Для HRESULT и LONG
 #include <windef.h>
+// CEN/XFS API -- для кодов ошибок
+#include <xfsapi.h>
+// PC/CS API -- для кодов ошибок
+#include <winscard.h>
 
 namespace PCSC {
     /** Результат выполнения PC/SC функций. */

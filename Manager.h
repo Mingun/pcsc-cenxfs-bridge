@@ -5,6 +5,7 @@
 
 #include "Task.h"
 
+#include "PCSC/Context.h"
 #include "PCSC/Status.h"
 
 #include "XFS/Result.h"
@@ -34,13 +35,11 @@ class Settings;
     при выгрузке. Наиболее просто это делается, путем объявления глобальной переменной данного
     класса.
 */
-class Manager {
+class Manager : public PCSC::Context {
 public:
     /// Тип для отображения сервисов XFS на карты PC/SC.
     typedef std::map<HSERVICE, Service*> ServiceMap;
 private:
-    /// Контекст подсистемы PC/SC.
-    SCARDCONTEXT hContext;
     /// Список карт, открытых для взаимодействия с системой XFS.
     ServiceMap services;
     /// Поток для выполнения ожидания изменения в оборудовании.
@@ -86,8 +85,6 @@ public:// Подписка на события и генерация событ�
     */
     bool addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
     bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
-public:// Доступ к внутренностям
-    inline SCARDCONTEXT context() const { return hContext; }
 private:// Опрос изменений
     /// Блокирует выполнение, пока поток не будет остановлен. Необходимо
     /// запускать из своего потока.

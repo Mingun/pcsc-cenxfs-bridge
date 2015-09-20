@@ -9,10 +9,9 @@
 #include <cassert>
 
 /// Открывает соединение к менеджеру подсистемы PC/SC.
-Manager::Manager() : stopRequested(false) {
-    // Создаем контекст.
-    PCSC::Status st = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
-    XFS::Logger() << "SCardEstablishContext: " << st;
+Manager::Manager()
+    : stopRequested(false)
+{
     // Запускаем поток ожидания изменений от системы PC/SC -- добавление и удаление
     // считывателей и карточек.
     waitChangesThread.reset(new boost::thread(&Manager::waitChangesRun, this));
@@ -22,7 +21,7 @@ Manager::~Manager() {
     // Запрашиваем остановку потока.
     stopRequested = true;
     // Сигнализируем о том, что необходимо прервать ожидание
-    SCardCancel(hContext);
+    SCardCancel(context());
     // Ожидаем, пока дойдет.
     waitChangesThread->join();
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
@@ -30,8 +29,6 @@ Manager::~Manager() {
         delete it->second;
     }
     services.clear();
-    PCSC::Status st = SCardReleaseContext(hContext);
-    XFS::Logger() << "SCardReleaseContext: " << st;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Service& Manager::create(HSERVICE hService, const Settings& settings) {
@@ -109,7 +106,7 @@ std::vector<const char*> getReaderNames(const std::vector<char>& readerNames) {
 DWORD Manager::getReadersAndWaitChanges(DWORD readersState) {
     DWORD readersCount = 0;
     // Определяем доступные считыватели: сначало количество, затем сами считыватели.
-    PCSC::Status st = SCardListReaders(hContext, NULL, NULL, &readersCount);
+    PCSC::Status st = SCardListReaders(context(), NULL, NULL, &readersCount);
     {XFS::Logger() << "SCardListReaders(get readers count): " << st;}
 
     // Получаем имена доступных считывателей. Все имена расположены в одной строке,
@@ -117,7 +114,7 @@ DWORD Manager::getReadersAndWaitChanges(DWORD readersState) {
     // идет подряд два '\0').
     std::vector<char> readerNames(readersCount);
     if (readersCount != 0) {
-        st = SCardListReaders(hContext, NULL, &readerNames[0], &readersCount);
+        st = SCardListReaders(context(), NULL, &readerNames[0], &readersCount);
         XFS::Logger() << "SCardListReaders(get readers): " << st;
     }
 
@@ -151,7 +148,7 @@ DWORD Manager::getReadersAndWaitChanges(DWORD readersState) {
 bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
     // Данная функция блокирует выполнение до тех пор, пока не произойдет событие.
     // Ждем его до бесконечности.
-    PCSC::Status st = SCardGetStatusChange(hContext, tasks.getTimeout(), &readers[0], (DWORD)readers.size());
+    PCSC::Status st = SCardGetStatusChange(context(), tasks.getTimeout(), &readers[0], (DWORD)readers.size());
     {XFS::Logger() << "SCardGetStatusChange: " << st;}
     // Если изменение вызвано таймаутом операции, выкидываем из очереди ожидания все
     // задачи, чей таймаут уже наступил
@@ -190,7 +187,7 @@ void Manager::addTask(const Task::Ptr& task) {
     if (tasks.addTask(task)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
-        PCSC::Status st = SCardCancel(hContext);
+        PCSC::Status st = SCardCancel(context());
         XFS::Logger() << "SCardCancel(addTask): " << st;
     }
 }
@@ -198,7 +195,7 @@ bool Manager::cancelTask(HSERVICE hService, REQUESTID ReqID) {
     if (tasks.cancelTask(hService, ReqID)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
-        PCSC::Status st = SCardCancel(hContext);
+        PCSC::Status st = SCardCancel(context());
         XFS::Logger() << "SCardCancel(cancelTask): " << st;
         return true;
     }
