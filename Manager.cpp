@@ -24,51 +24,6 @@ Manager::~Manager() {
     SCardCancel(context());
     // Ожидаем, пока дойдет.
     waitChangesThread->join();
-    for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
-        assert(it->second != NULL);
-        delete it->second;
-    }
-    services.clear();
-}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Service& Manager::create(HSERVICE hService, const Settings& settings) {
-    Service* service = new Service(*this, hService, settings);
-    services.insert(std::make_pair(hService, service));
-    return *service;
-}
-Service& Manager::get(HSERVICE hService) {
-    assert(isValid(hService));
-    Service* service = services.find(hService)->second;
-    assert(service != NULL);
-    return *service;
-}
-void Manager::remove(HSERVICE hService) {
-    assert(isValid(hService));
-    ServiceMap::iterator it = services.find(hService);
-
-    assert(it->second != NULL);
-    // Закрытие PC/SC соединения происходит в деструкторе Service.
-    delete it->second;
-    services.erase(it);
-}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-bool Manager::addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
-    ServiceMap::iterator it = services.find(hService);
-    if (it == services.end()) {
-        return false;
-    }
-    assert(it->second != NULL);
-    it->second->add(hWndReg, dwEventClass);
-    return true;
-}
-bool Manager::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
-    ServiceMap::iterator it = services.find(hService);
-    if (it == services.end()) {
-        return false;
-    }
-    assert(it->second != NULL);
-    it->second->remove(hWndReg, dwEventClass);
-    return true;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Manager::waitChangesRun() {
@@ -176,10 +131,7 @@ bool Manager::waitChanges(std::vector<SCARD_READERSTATE>& readers) {
 void Manager::notifyChanges(const SCARD_READERSTATE& state) {
     // Сначала уведомляем подписанных слушателей об изменениях, и только затем
     // пытаемся завершить задачи.
-    for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
-        it->second->notify(state);
-    }
-
+    services.notifyChanges(state);
     tasks.notifyChanges(state);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

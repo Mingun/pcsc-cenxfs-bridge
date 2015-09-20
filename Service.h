@@ -32,7 +32,7 @@ class Service : public EventNotifier {
     /// Настройки данного сервиса.
     Settings mSettings;
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
-    friend class Manager;
+    friend class ServiceContainer;
 private:
     /** Открывает указанную карточку для работы.
     @param pcsc Ресурсный менеджер подсистемы PC/SC.

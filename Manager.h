@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ServiceContainer.h"
 #include "Task.h"
 
 #include "PCSC/Context.h"
@@ -10,8 +11,6 @@
 
 #include "XFS/Result.h"
 
-#include <map>
-#include <string>
 #include <vector>
 
 #include <boost/chrono/chrono.hpp>
@@ -36,12 +35,7 @@ class Settings;
     класса.
 */
 class Manager : public PCSC::Context {
-public:
-    /// Тип для отображения сервисов XFS на карты PC/SC.
-    typedef std::map<HSERVICE, Service*> ServiceMap;
 private:
-    /// Список карт, открытых для взаимодействия с системой XFS.
-    ServiceMap services;
     /// Поток для выполнения ожидания изменения в оборудовании.
     boost::shared_ptr<boost::thread> waitChangesThread;
     /// Флаг, выставляемый основным потоком, когда возникнет необходимость остановить
@@ -50,21 +44,34 @@ private:
 
     /// Контейнер, управляющий асинхронными задачами на получение данных с карточки.
     TaskContainer tasks;
+    /// Список сервисов, открытых для взаимодействия с системой XFS.
+    ServiceContainer services;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
     Manager();
     /// Закрывает соединение к менеджеру подсистемы PC/SC.
     ~Manager();
+public:// Управление сервисами
     /** Проверяет, что указаный хендл сервиса является корректным хендлом карточки. */
-    inline bool isValid(HSERVICE hService) {
-        return services.find(hService) != services.end();
-    }
+    inline bool isValid(HSERVICE hService) const { return services.isValid(hService); }
     /** @return true, если в менеджере не зарегистрировано ни одного сервиса. */
-    inline bool isEmpty() const { return services.empty(); }
+    inline bool isEmpty() const { return services.isEmpty(); }
 
-    Service& create(HSERVICE hService, const Settings& settings);
-    Service& get(HSERVICE hService);
-    void remove(HSERVICE hService);
+    inline Service& create(HSERVICE hService, const Settings& settings) {
+        return services.create(*this, hService, settings);
+    }
+    inline Service& get(HSERVICE hService) { return services.get(hService); }
+    inline void remove(HSERVICE hService) { services.remove(hService); }
+public:// Подписка на события и генерация событий
+    /** Добавляет указанное окно к подписчикам на указанные события от указанного сервиса.
+    @return `false`, если указанный `hService` не зарегистрирован в объекте, иначе `true`.
+    */
+    inline bool addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
+        return services.addSubscriber(hService, hWndReg, dwEventClass);
+    }
+    inline bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass) {
+        return services.removeSubscriber(hService, hWndReg, dwEventClass);
+    }
 public:// Управление задачами
     void addTask(const Task::Ptr& task);
     /** Отменяет задачу с указанный трекинговым номером, возвращает `true`, если задача с таким
@@ -79,12 +86,6 @@ public:// Управление задачами
         `true`, если задача с таким номером имелась в списке, иначе `false`.
     */
     bool cancelTask(HSERVICE hService, REQUESTID ReqID);
-public:// Подписка на события и генерация событий
-    /** Добавляет указанное окно к подписчикам на указанные события от указанного сервиса.
-    @return `false`, если указанный `hService` не зарегистрирован в объекте, иначе `true`.
-    */
-    bool addSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
-    bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
 private:// Опрос изменений
     /// Блокирует выполнение, пока поток не будет остановлен. Необходимо
     /// запускать из своего потока.
