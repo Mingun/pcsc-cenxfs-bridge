@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ReaderChangesMonitor.h"
 #include "ServiceContainer.h"
 #include "Task.h"
 
@@ -14,10 +15,6 @@
 #include <vector>
 
 #include <boost/chrono/chrono.hpp>
-
-#include <boost/shared_ptr.hpp>
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/thread/thread.hpp>
 
 // PC/CS API
 #include <winscard.h>
@@ -36,21 +33,21 @@ class Settings;
 */
 class Manager : public PCSC::Context {
 private:
-    /// Поток для выполнения ожидания изменения в оборудовании.
-    boost::shared_ptr<boost::thread> waitChangesThread;
-    /// Флаг, выставляемый основным потоком, когда возникнет необходимость остановить
-    ///`waitChangesThread`.
-    bool stopRequested;
+    // Порядок следования полей важен, т.к. сначала будут разрушаться
+    // те объекты, которые объявлены ниже. В первую очередь необходимо
+    // завершить поток опроса изменений, затем выслать уведомления об
+    // отмене всех задач и в конце удалить все сервисы.
 
-    /// Контейнер, управляющий асинхронными задачами на получение данных с карточки.
-    TaskContainer tasks;
     /// Список сервисов, открытых для взаимодействия с системой XFS.
     ServiceContainer services;
+    /// Контейнер, управляющий асинхронными задачами на получение данных с карточки.
+    TaskContainer tasks;
+    /// Объект для слежения за состоянием считывателей и рассылки уведомлений,
+    /// когда состояние меняется. При разрушении прекращает ожидание изменений.
+    ReaderChangesMonitor readerChangesMonitor;
 public:
     /// Открывает соединение к менеджеру подсистемы PC/SC.
     Manager();
-    /// Закрывает соединение к менеджеру подсистемы PC/SC.
-    ~Manager();
 public:// Управление сервисами
     /** Проверяет, что указаный хендл сервиса является корректным хендлом карточки. */
     inline bool isValid(HSERVICE hService) const { return services.isValid(hService); }
@@ -86,19 +83,13 @@ public:// Управление задачами
         `true`, если задача с таким номером имелась в списке, иначе `false`.
     */
     bool cancelTask(HSERVICE hService, REQUESTID ReqID);
-private:// Опрос изменений
-    /// Блокирует выполнение, пока поток не будет остановлен. Необходимо
-    /// запускать из своего потока.
-    void waitChangesRun();
-    DWORD getReadersAndWaitChanges(DWORD readersState);
-
-    /** Данная блокирует выполнение до тех пор, пока не получит событие об изменении состояния
-        физических устройств, поэтому она должна вызываться в отдельном потоке. После наступления
-        события она отсылает соответствующие события всем заинтересованным слушателям подсистемы XFS.
-    @param readers Отслеживаемые считыватели. Первый элемент отслеживает изменения устройств.
-    @return `true`, если произошли изменения в количестве считывателей, `false` иначе.
-    */
-    bool waitChanges(std::vector<SCARD_READERSTATE>& readers);
+private:// Функции для использования ReaderChangesMonitor
+    friend class ReaderChangesMonitor;
+    /// @copydoc TaskContainer::getTimeout
+    inline DWORD getTimeout() const { return tasks.getTimeout(); }
+    /// @copydoc TaskContainer::processTimeouts
+    inline void processTimeouts(boost::chrono::steady_clock::time_point now) { tasks.processTimeouts(now); }
+    /// @copydoc TaskContainer::notifyChanges
     void notifyChanges(const SCARD_READERSTATE& state);
 };
 
