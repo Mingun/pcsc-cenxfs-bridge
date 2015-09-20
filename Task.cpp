@@ -14,6 +14,14 @@ HSERVICE Task::serviceHandle() const {
     return mService.handle();
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TaskContainer::~TaskContainer() {
+    boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
+    for (TaskList::iterator it = tasks.begin(); it != tasks.end(); ++it) {
+        (*it)->cancel();
+    }
+    tasks.clear();
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 bool TaskContainer::addTask(const Task::Ptr& task) {
     boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
 
