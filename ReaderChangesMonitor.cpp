@@ -2,6 +2,9 @@
 
 #include "Manager.h"
 
+#include "PCSC/ReaderState.h"
+#include "PCSC/Status.h"
+
 #include "XFS/Logger.h"
 
 ReaderChangesMonitor::ReaderChangesMonitor(Manager& manager)
@@ -105,6 +108,15 @@ bool ReaderChangesMonitor::waitChanges(std::vector<SCARD_READERSTATE>& readers) 
     bool readersChanged = false;
     bool first = true;
     for (std::vector<SCARD_READERSTATE>::iterator it = readers.begin(); it != readers.end(); ++it) {
+        {
+        PCSC::ReaderState diff = PCSC::ReaderState(it->dwCurrentState ^ it->dwEventState);
+        XFS::Logger() << "[" << it->szReader << "] old state = " << PCSC::ReaderState(it->dwCurrentState);
+        XFS::Logger() << "[" << it->szReader << "] new state = " << PCSC::ReaderState(it->dwEventState);
+        XFS::Logger() << "[" << it->szReader << "] diff = " << diff;
+        // XFS::Logger() << "[" << it->szReader << "] added = " << PCSC::ReaderState(it->dwEventState & diff.value());
+        // XFS::Logger() << "[" << it->szReader << "] removed = " << PCSC::ReaderState(it->dwCurrentState & diff.value());
+        }
+
         // Если что-то изменилось, уведомляем об этом всех заинтересованных.
         if (it->dwEventState & SCARD_STATE_CHANGED) {
             // Первый элемент в списке -- объект, через который приходят
