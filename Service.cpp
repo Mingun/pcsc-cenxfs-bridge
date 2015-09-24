@@ -144,8 +144,8 @@ void Service::notify(const SCARD_READERSTATE& state) {
 std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
     // Состояние считывателя.
     PCSC::MediaStatus state;
-    DWORD nameLen;
-    DWORD atrLen;
+    DWORD nameLen = 0;
+    DWORD atrLen = 0;
     // Если карточки не будет в считывателе, то вернется ошибка и в ответ мы дадим WFS_IDC_MEDIANOTPRESENT
     PCSC::Status st = SCARD_S_SUCCESS;
     if (hCard != 0) {

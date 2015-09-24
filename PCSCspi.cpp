@@ -429,7 +429,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             //WFSIDCCARDDATA** data = (WFSIDCCARDDATA**)lpCmdData;
             return WFS_ERR_UNSUPP_COMMAND;
         }
-        // Посылает данные чипу и полуучает от него ответ. Данные прозрачны для провайдера.
+        // Посылает данные чипу и получает от него ответ. Данные прозрачны для провайдера.
         case WFS_CMD_IDC_CHIP_IO: {
             if (lpCmdData == NULL) {
                 return WFS_ERR_INVALID_POINTER;
