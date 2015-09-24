@@ -88,7 +88,7 @@ namespace XFS {
             return *this;
         }
     public:// Заполнение результатов команд WFPExecute
-        /// Прикрепляет к результату указанные данные возможностей устройства.
+        /// Прикрепляет к результату указанные данные чтения карточки.
         inline Result& attach(WFSIDCCARDDATA** data) {
             assert(pResult != NULL);
             assert(pResult->lpBuffer == NULL && "Result already has data!");
@@ -96,7 +96,7 @@ namespace XFS {
             pResult->lpBuffer = data;
             return *this;
         }
-        /// Прикрепляет к результату указанные данные возможностей устройства.
+        /// Прикрепляет к результату указанные данные с ответом чипа.
         inline Result& attach(WFSIDCCHIPIO* data) {
             assert(pResult != NULL);
             assert(pResult->lpBuffer == NULL && "Result already has data!");
@@ -138,6 +138,13 @@ namespace XFS {
             pResult->u.dwEventID = WFS_SRVE_IDC_MEDIADETECTED;
             //TODO: Возможно, необходимо выделять память через WFSAllocateMore
             pResult->lpBuffer = XFS::alloc<DWORD>(WFS_IDC_CARDREADPOSITION);
+            return *this;
+        }
+    public:
+        inline Result& eject() {
+            assert(pResult != NULL);
+            assert(pResult->lpBuffer == NULL && "Result already has data!");
+            pResult->u.dwEventID = WFS_CMD_IDC_EJECT_CARD;
             return *this;
         }
         void send(HWND hWnd, DWORD messageType) {

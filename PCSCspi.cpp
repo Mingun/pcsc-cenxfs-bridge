@@ -379,6 +379,14 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
         // Команда говорит считывателю вернуть карту. Так как наш считыватель не умеет сам что-либо
         // делать с картой, эту команду мы не поддерживаем.
         case WFS_CMD_IDC_EJECT_CARD: {// Входных параметров нет.
+            // Kalignite пытается извлечь карту, невзирая на то, что мы сообщает, что эта возможность
+            // не поддерживается, и падает с Fatal Error, если сообщить ему, что он требует невозможного,
+            // хотя по спецификации мы обязаны сообщать о том, что данная возможность не поддерживается
+            // кодом ответа WFS_ERR_UNSUPP_COMMAND и имеем право не поддерживать эту возможность.
+            if (pcsc.get(hService).settings().workarounds.canEject) {
+                XFS::Result(ReqID, hService, WFS_SUCCESS).eject().send(hWnd, WFS_EXECUTE_COMPLETE);
+                return WFS_SUCCESS;
+            }
             return WFS_ERR_UNSUPP_COMMAND;
         }
         // Команда на захват карты считывателем. Аналогично предыдущей команде.
