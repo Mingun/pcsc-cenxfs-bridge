@@ -15,16 +15,20 @@
     текстовый вид.
 @tparam T Тип для хранения значений флагов. Должен быть числовым типом.
 @tparam Derived Реальный тип флагов, унаследованный от данного класса.
+@tparam Count Количество флагов, которое может хранится в данном типе.
 */
-template<typename T, class Derived>
+template<typename T, class Derived, std::size_t Count = sizeof(T)*8>
 class Flags {
 public:
     /// Нижележащий целочисленный тип, в котором хранятся флаги.
     typedef T type;
+public:
+    /// Количество флагов, которое может хранится в данном типе.
+    static const std::size_t count = Count;
 protected:
     T mValue;
     template<class OS>
-    friend inline OS& operator<<(OS& os, Flags<T, Derived> f) {
+    friend inline OS& operator<<(OS& os, Flags<T, Derived, Count> f) {
         // Сначала сохраняем флаги форматирования, т.к. сейчас будем их менять.
         std::ios_base::fmtflags ff = os.flags();
         // Каждый байт представляется двумя 16-ричными цифрами. sizeof дает размер в байтах.
@@ -41,7 +45,7 @@ protected:
             os << *it;
             first = false;
         }
-        os << ')';
+        os << ")";
         // Восстанавливаем флаги форматирования
         os.flags(ff);
         return os;
@@ -53,13 +57,13 @@ public:
     inline T value() const { return this->mValue; }
     /// Получает количество установленных флагов.
     std::size_t size() const {
-        std::size_t count = 0;
-        for (std::size_t i = 0; i < sizeof(T)*8; ++i) {
+        std::size_t r = 0;
+        for (std::size_t i = 0; i < Count; ++i) {
             if (this->mValue & (1 << i)) {
-                ++count;
+                ++r;
             }
         }
-        return count;
+        return r;
     }
 protected:
     /** Получает список названий флагов, установленных в данный момент.
