@@ -91,8 +91,6 @@ public:// Функции, вызываемые в WFPExecute
 public:// Служебные функции
     inline HSERVICE handle() const { return hService; }
     inline const Settings& settings() const { return mSettings; }
-private:
-    void log(std::string operation, PCSC::Status st) const;
 };
 
 #endif // PCSC_CENXFS_BRIDGE_Service_H

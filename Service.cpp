@@ -18,6 +18,22 @@
 // Для работы с текущим временем, для получения времени дедлайна.
 #include <boost/chrono/chrono.hpp>
 
+class Hex {
+    const char* mBegin;
+    const char* mEnd;
+private:
+    friend inline XFS::Logger& operator<<(XFS::Logger& os, const Hex& h) {
+        os << std::hex << std::setfill('0');
+        for (const char* it = h.mBegin; it < h.mEnd; ++it) {
+            unsigned int value = *it & 0xFF;
+            os << std::setw(2) << value << ' ';
+        }
+        return os;
+    }
+public:
+    Hex(LPBYTE begin, ULONG count) : mBegin((const char*)begin), mEnd((const char*)begin + count) {}
+};
+
 class CardReadTask : public Task {
     /// Данные, которые должны быть прочитаны.
     XFS::ReadFlags mFlags;
@@ -28,6 +44,8 @@ public:
         DWORD added = state.dwCurrentState ^ state.dwEventState;
         // Если в указанном бите есть изменения и он был установлен, генерируем событие вставки карты.
         if (added & SCARD_STATE_PRESENT) {
+            {XFS::Logger() << "Card inserted to reader " << state.szReader << ", read flags: " << mFlags; }
+
             WFSIDCCARDDATA** result = mService.wrap(translate(state), mFlags);
             // Уведомляем поставщика задачи, что она выполнена.
             XFS::Result(ReqID, serviceHandle(), WFS_SUCCESS).attach(result).send(hWnd, WFS_EXECUTE_COMPLETE);
@@ -46,7 +64,7 @@ private:
         data->ulDataLength = state.cbAtr;
         data->lpbData = XFS::allocArr<BYTE>(state.cbAtr);
         std::memcpy(data->lpbData, state.rgbAtr, state.cbAtr);
-
+        {XFS::Logger() << "atr=" << Hex(data->lpbData, data->ulDataLength);}
         return data;
     }
 };
@@ -79,34 +97,35 @@ PCSC::Status Service::open() {
         // Получаем хендл карты и выбранный протокол.
         &hCard, &dwActiveProtocol
     );
-    log("SCardConnect", st);
+    {XFS::Logger() << "SCardConnect(hContext=" << pcsc.context() << ", ..., hCard=&" << hCard << ", dwActiveProtocol=&" << dwActiveProtocol << ") = " << st; }
     return st;
 }
 PCSC::Status Service::close() {
     assert(hCard != 0 && "Attempt disconnect from non-connected card");
     // При закрытии соединения ничего не делаем с карточкой, оставляем ее в считывателе.
     PCSC::Status st = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
-    log("SCardDisconnect", st);
+    {XFS::Logger() << "SCardDisconnect(hCard=" << hCard << ", SCARD_LEAVE_CARD) = " << st; }
     hCard = 0;
     return st;
 }
 
 PCSC::Status Service::lock() {
     PCSC::Status st = SCardBeginTransaction(hCard);
-    log("SCardBeginTransaction", st);
+    {XFS::Logger() << "SCardBeginTransaction(hCard=" << hCard << ") = " << st; }
 
     return st;
 }
 PCSC::Status Service::unlock() {
     // Заканчиваем транзакцию, ничего не делаем с картой.
     PCSC::Status st = SCardEndTransaction(hCard, SCARD_LEAVE_CARD);
-    log("SCardEndTransaction", st);
+    {XFS::Logger() << "SCardEndTransaction(hCard=" << hCard << ", SCARD_LEAVE_CARD) = " << st; }
 
     return st;
 }
 /// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
 void Service::notify(const SCARD_READERSTATE& state) {
     DWORD added = (state.dwCurrentState ^ state.dwEventState) & state.dwEventState;
+    {XFS::Logger() << "Service::notify: reader=" << state.szReader << ", state=" << PCSC::ReaderState(state.dwEventState) << ", added=" << PCSC::ReaderState(added); }
     /*if (added & SCARD_STATE_) {
         EventNotifier::notify(WFS_SYSTEM_EVENT, PCSC::DeviceDetected(*this, state));
     }*/
@@ -138,7 +157,7 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
             // ATR получать не будем, тем не менее длину получить требуется, NULL недопустим.
             NULL, &atrLen
         );
-        log("SCardStatus", st);
+        {XFS::Logger() << "SCardStatus(hCard=" << hCard << ", ..., state=&" << state << ", ...) = " << st; }
     }
     bool hasCard = hCard != 0 && st;
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
@@ -169,7 +188,7 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     PCSC::Status st = SCARD_S_SUCCESS;
     if (hCard != 0) {
         st = SCardGetAttrib(hCard, SCARD_ATTR_PROTOCOL_TYPES, (BYTE*)&types, &len);
-        log("SCardStatus", st);
+        {XFS::Logger() << "SCardGetAttrib(hCard=" << hCard << ", attr=SCARD_ATTR_PROTOCOL_TYPES, types=&" << types << "...) = " << st; }
     }
     bool hasCard = hCard != 0 && st;
     // Устройство является считывателем карт.
@@ -224,6 +243,8 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFl
 }
 WFSIDCCARDDATA* Service::readChip() const {
     assert(hCard != 0 && "Attempt read ATR when card not in the reader");
+
+    {XFS::Logger() << "Read chip (hCard=" << hCard << ')'; }
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
     // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
@@ -233,10 +254,14 @@ WFSIDCCARDDATA* Service::readChip() const {
     data->wStatus = WFS_IDC_DATAOK;
     // Получаем ATR (Answer To Reset). Сначала длину, потом сами данные.
     PCSC::Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, NULL, &data->ulDataLength);
-    log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, NULL, ?)", st);
+    {XFS::Logger() << "SCardGetAttrib(hCard=" << hCard << ", SCARD_ATTR_ATR_STRING, ..., size=&" << data->ulDataLength << ") = " << st; }
     data->lpbData = XFS::allocArr<BYTE>(data->ulDataLength);
     st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
-    log("SCardGetAttrib(?, SCARD_ATTR_ATR_STRING, ?, ?)", st);
+    {
+        XFS::Logger l;
+        l << "SCardGetAttrib(hCard=" << hCard << ", SCARD_ATTR_ATR_STRING, atr=&["
+          << Hex(data->lpbData, data->ulDataLength) << "], size=&" << data->ulDataLength << ") = " << st;
+    }
 
     return data;
 }
@@ -244,6 +269,7 @@ WFSIDCCARDDATA* Service::readTrack2() const {
     assert(hCard != 0 && "Attempt read TRACK2 when card not in the reader");
     assert(mSettings.track2.report == true && "Attempt read TRACK2 when setting Track2.Report is false");
 
+    {XFS::Logger() << "Read track2 (hCard=" << hCard << ')'; }
     std::size_t size = mSettings.track2.value.size();
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
@@ -259,19 +285,16 @@ WFSIDCCARDDATA* Service::readTrack2() const {
 
 WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) const {
     assert((forRead.value() & WFS_IDC_CHIP) && "Service::wrap: Chip data not requested");
-    // Снимаем флаг, который мы обрабатываем отдельно.
-    // XFS::ReadFlags flags = XFS::ReadFlags(forRead.value() & ~WFS_IDC_CHIP);
     // Данный вызов вернет заполненный нулями массив под два указателя на WFSIDCCARDDATA.
-    // В первом элементе будет наш результат, во всех последующих -- прочие запрошенные
-    // данные (пустые), в поледнем NULL -- признак конца массива.
+    // В поледнем элементе NULL -- признак конца массива.
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCARDDATA** result = XFS::allocArr<WFSIDCCARDDATA*>(forRead.size() + 1);
-    // result[0] = iccData;
 
     std::size_t j = 0;
-    for (std::size_t i = 0; i < sizeof(XFS::ReadFlags::type)*8; ++i) {
+    for (std::size_t i = 0; i < XFS::ReadFlags::count; ++i) {
         XFS::ReadFlags::type flag = (1 << i);
         if (forRead.value() & flag) {
+            {XFS::Logger() << "Read " << XFS::ReadFlags(flag); }
             if (flag == WFS_IDC_CHIP) {
                 result[j] = iccData;
             } else
@@ -296,6 +319,14 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
     assert(input != NULL && "Service::transmit: No input from XFS subsystem");
     assert(hCard != 0 && "Service::transmit: No card in reader");
 
+    {
+        XFS::Logger l;
+        l << "Service::transmit(input): dwActiveProtocol=" << PCSC::ProtocolTypes(dwActiveProtocol)
+             << ", protocol=" << input->wChipProtocol
+             << ", len=" << input->ulChipDataLength
+             << ", data=[" << Hex(input->lpbChipData, input->ulChipDataLength)
+             << ']';
+    }
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCHIPIO* result = XFS::alloc<WFSIDCCHIPIO>();
     result->wChipProtocol = input->wChipProtocol;
@@ -322,11 +353,13 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
         &ioRq, input->lpbChipData, inputSize,
         NULL, result->lpbChipData, &result->ulChipDataLength
     );
-    log("SCardTransmit", st);
+    {XFS::Logger() << "SCardTransmit(hCard=" << hCard << ", ...) = " << st; }
+    {
+        XFS::Logger l;
+        l << "Service::transmit(result): len=" << result->ulChipDataLength
+          << ", data=[" << Hex(result->lpbChipData, result->ulChipDataLength)
+         << ']';
+    }
 
     return std::make_pair(result, st);
-}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void Service::log(std::string operation, PCSC::Status st) const {
-    XFS::Logger() << "[PCSC='" << mSettings.readerName << "'] " << operation << ": " << st;
 }
