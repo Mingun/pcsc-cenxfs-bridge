@@ -368,7 +368,10 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
         // Ожидание вставки карты с указанным таймаутом, немедленное чтение треков согласно форме,
         // переданой в параметре. Так как мы не умеем читать треки, то команда не поддерживается.
         case WFS_CMD_IDC_READ_TRACK: {
-            //LPSTR formName = (LPSTR)lpCmdData;
+            if (lpCmdData == NULL) {
+                return WFS_ERR_INVALID_POINTER;
+            }
+            LPSTR formName = (LPSTR)lpCmdData;
             return WFS_ERR_UNSUPP_COMMAND;
         }
         // Аналогично чтению треков.
