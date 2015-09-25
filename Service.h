@@ -9,6 +9,7 @@
 #include "EventSupport.h"
 #include "Settings.h"
 
+#include "PCSC/ProtocolTypes.h"
 #include "PCSC/Status.h"
 
 #include "XFS/ReadFlags.h"
@@ -28,7 +29,7 @@ class Service : public EventNotifier {
     /// Хендл карты, с которой будет производиться работа.
     SCARDHANDLE hCard;
     /// Протокол, по которому работает карта.
-    DWORD dwActiveProtocol;
+    PCSC::ProtocolTypes mActiveProtocol;
     /// Настройки данного сервиса.
     Settings mSettings;
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.

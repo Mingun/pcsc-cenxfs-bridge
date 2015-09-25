@@ -74,7 +74,7 @@ Service::Service(Manager& pcsc, HSERVICE hService, const Settings& settings)
     : pcsc(pcsc)
     , hService(hService)
     , hCard(0)
-    , dwActiveProtocol(0)
+    , mActiveProtocol(0)
     , mSettings(settings)
 {
     {XFS::Logger() << "Settings: " << settings.toJSONString();}
@@ -95,9 +95,9 @@ PCSC::Status Service::open() {
         // У нас нет предпочитаемого протокола, работаем с тем, что дают
         SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
         // Получаем хендл карты и выбранный протокол.
-        &hCard, &dwActiveProtocol
+        &hCard, (DWORD*)&mActiveProtocol
     );
-    {XFS::Logger() << "SCardConnect(hContext=" << pcsc.context() << ", ..., hCard=&" << hCard << ", dwActiveProtocol=&" << dwActiveProtocol << ") = " << st; }
+    {XFS::Logger() << "SCardConnect(hContext=" << pcsc.context() << ", ..., hCard=&" << hCard << ", dwActiveProtocol=&" << mActiveProtocol << ") = " << st; }
     return st;
 }
 PCSC::Status Service::close() {
@@ -153,11 +153,11 @@ std::pair<WFSIDCSTATUS*, PCSC::Status> Service::getStatus() {
             // Имя получать не будем, тем не менее длину получить требуется, NULL недопустим.
             NULL, &nameLen,
             // Небольшой хак допустим, у нас прозрачная обертка, ничего лишнего.
-            (DWORD*)&state, &dwActiveProtocol,
+            (DWORD*)&state, (DWORD*)&mActiveProtocol,
             // ATR получать не будем, тем не менее длину получить требуется, NULL недопустим.
             NULL, &atrLen
         );
-        {XFS::Logger() << "SCardStatus(hCard=" << hCard << ", ..., state=&" << state << ", ...) = " << st; }
+        {XFS::Logger() << "SCardStatus(hCard=" << hCard << ", ..., state=&" << state << ", dwActiveProtocol=&" << mActiveProtocol << ", ...) = " << st; }
     }
     bool hasCard = hCard != 0 && st;
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
@@ -321,7 +321,7 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
 
     {
         XFS::Logger l;
-        l << "Service::transmit(input): dwActiveProtocol=" << PCSC::ProtocolTypes(dwActiveProtocol)
+        l << "Service::transmit(input): dwActiveProtocol=" << mActiveProtocol
              << ", protocol=" << input->wChipProtocol
              << ", len=" << input->ulChipDataLength
              << ", data=[" << Hex(input->lpbChipData, input->ulChipDataLength)
