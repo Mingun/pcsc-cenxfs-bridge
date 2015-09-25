@@ -104,6 +104,13 @@ namespace XFS {
             pResult->lpBuffer = data;
             return *this;
         }
+        inline Result& attach(WFSIDCCHIPPOWEROUT* data) {
+            assert(pResult != NULL);
+            assert(pResult->lpBuffer == NULL && "Result already has data!");
+            pResult->u.dwCommandCode = WFS_CMD_IDC_CHIP_POWER;
+            pResult->lpBuffer = data;
+            return *this;
+        }
     public:
         /// Прикрепляет к результату указанные данные возможностей устройства.
         inline Result& attach(WFSDEVSTATUS* data) {

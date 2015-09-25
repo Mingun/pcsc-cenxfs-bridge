@@ -451,8 +451,9 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
                 return WFS_ERR_INVALID_POINTER;
             }
             WORD wChipPower = *((WORD*)lpCmdData);
-            //TODO: Реализовать команду WFS_CMD_IDC_CHIP_POWER
-            return WFS_ERR_INTERNAL_ERROR;
+            std::pair<WFSIDCCHIPPOWEROUT*, PCSC::Status> result = pcsc.get(hService).reset(wChipPower);
+            XFS::Result(ReqID, hService, result.second).attach(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
+            return WFS_SUCCESS;
         }
         // Разбирает результат, ранее возвращенный командой WFS_CMD_IDC_READ_RAW_DATA. Так как мы ее
         // не поддерживаем, то и эту команду мы не поддерживаем.

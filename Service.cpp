@@ -376,3 +376,22 @@ std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) co
 
     return std::make_pair(result, st);
 }
+std::pair<WFSIDCCHIPPOWEROUT*, PCSC::Status> Service::reset(XFS::ResetAction action) const {
+    assert(hCard != 0 && "Service::reset: No card in the reader");
+
+    PCSC::Status st = SCardReconnect(
+        hCard, SCARD_SHARE_SHARED,
+        // Текущий активный протокол должен быть в числе запрошенных, иначе
+        // функция вернет ошибку.
+        mActiveProtocol.value() | SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
+        action.translate(),
+        (DWORD*)&mActiveProtocol
+    );
+    {XFS::Logger() << "SCardReconnect(hCard=" << hCard << ", ..., dwActiveProtocol=&" << mActiveProtocol << ") = " << st; }
+
+    std::pair<DWORD, BYTE*> atr = readATR();
+    WFSIDCCHIPPOWEROUT* result = XFS::alloc<WFSIDCCHIPPOWEROUT>();
+    result->ulChipDataLength = atr.first;
+    result->lpbChipData = atr.second;
+    return std::make_pair(result, st);
+}

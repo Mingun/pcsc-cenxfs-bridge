@@ -13,6 +13,7 @@
 #include "PCSC/Status.h"
 
 #include "XFS/ReadFlags.h"
+#include "XFS/ResetAction.h"
 
 #include <string>
 // Для std::pair
@@ -92,6 +93,8 @@ public:// Функции, вызываемые в WFPExecute
     WFSIDCCARDDATA** wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) const;
 
     std::pair<WFSIDCCHIPIO*, PCSC::Status> transmit(WFSIDCCHIPIO* input) const;
+    /// Выполняет реинициализацию чипа.
+    std::pair<WFSIDCCHIPPOWEROUT*, PCSC::Status> reset(XFS::ResetAction action) const;
 public:// Служебные функции
     inline HSERVICE handle() const { return hService; }
     inline const Settings& settings() const { return mSettings; }
