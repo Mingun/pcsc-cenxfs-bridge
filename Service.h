@@ -15,6 +15,8 @@
 #include "XFS/ReadFlags.h"
 
 #include <string>
+// Для std::pair
+#include <utility>
 // CEN/XFS API -- Должно быть сверху, т.к., если поместить здесь,
 // то начинаются странные ошибки компиляции из winnt.h как минимум в MSVC 2005.
 //#include <xfsapi.h>
@@ -84,6 +86,7 @@ public:// Функции, вызываемые в WFPExecute
     */
     void asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFlags forRead);
 
+    std::pair<DWORD, BYTE*> readATR() const;
     WFSIDCCARDDATA* readChip() const;
     WFSIDCCARDDATA* readTrack2() const;
     WFSIDCCARDDATA** wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) const;

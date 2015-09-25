@@ -241,8 +241,28 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFl
         XFS::Result(ReqID, handle(), WFS_SUCCESS).attach(result).send(hWnd, WFS_EXECUTE_COMPLETE);
     }
 }
+std::pair<DWORD, BYTE*> Service::readATR() const {
+    assert(hCard != 0 && "Service::readATR: Attempt read ATR when card not in the reader");
+
+    {XFS::Logger() << "Read ATR (hCard=" << hCard << ')'; }
+    
+    std::pair<DWORD, BYTE*> result;
+
+    // Получаем ATR (Answer To Reset). Сначала длину, потом сами данные.
+    PCSC::Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, NULL, &result.first);
+    {XFS::Logger() << "SCardGetAttrib(hCard=" << hCard << ", SCARD_ATTR_ATR_STRING, ..., size=&" << result.first << ") = " << st; }
+    //TODO: Возможно, необходимо выделять память через WFSAllocateMore
+    result.second = XFS::allocArr<BYTE>(result.first);
+    st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, result.second, &result.first);
+    {
+        XFS::Logger l;
+        l << "SCardGetAttrib(hCard=" << hCard << ", SCARD_ATTR_ATR_STRING, atr=&["
+          << Hex(result.second, result.first) << "], size=&" << result.first << ") = " << st;
+    }
+    return result;
+}
 WFSIDCCARDDATA* Service::readChip() const {
-    assert(hCard != 0 && "Attempt read ATR when card not in the reader");
+    assert(hCard != 0 && "Service::readChip: Attempt read ATR when card not in the reader");
 
     {XFS::Logger() << "Read chip (hCard=" << hCard << ')'; }
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
@@ -252,17 +272,10 @@ WFSIDCCARDDATA* Service::readChip() const {
     //TODO: Статус прочитанных данных необходимо выставлять в соответствии со статусом,
     // который вернула SCardGetAttrib.
     data->wStatus = WFS_IDC_DATAOK;
-    // Получаем ATR (Answer To Reset). Сначала длину, потом сами данные.
-    PCSC::Status st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, NULL, &data->ulDataLength);
-    {XFS::Logger() << "SCardGetAttrib(hCard=" << hCard << ", SCARD_ATTR_ATR_STRING, ..., size=&" << data->ulDataLength << ") = " << st; }
-    data->lpbData = XFS::allocArr<BYTE>(data->ulDataLength);
-    st = SCardGetAttrib(hCard, SCARD_ATTR_ATR_STRING, data->lpbData, &data->ulDataLength);
-    {
-        XFS::Logger l;
-        l << "SCardGetAttrib(hCard=" << hCard << ", SCARD_ATTR_ATR_STRING, atr=&["
-          << Hex(data->lpbData, data->ulDataLength) << "], size=&" << data->ulDataLength << ") = " << st;
-    }
 
+    std::pair<DWORD, BYTE*> atr = readATR();
+    data->ulDataLength = atr.first;
+    data->lpbData = atr.second;
     return data;
 }
 WFSIDCCARDDATA* Service::readTrack2() const {
