@@ -92,7 +92,16 @@ public:// Функции, вызываемые в WFPExecute
     WFSIDCCARDDATA* readTrack2() const;
     WFSIDCCARDDATA** wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) const;
 
-    std::pair<WFSIDCCHIPIO*, PCSC::Status> transmit(WFSIDCCHIPIO* input) const;
+    /** Осуществляет передачу данных из входного параметра чипу и получет от него ответ.
+
+    @param input
+        Буфер, полученный от подсистемы XFS, содержащий параметры протокола и передаваемые данные.
+
+    @return
+        Пару, содержащую буфер, который необходимо передать приложению (оно заботится об освобождении
+        памяти) и статус выполнения команды.
+    */
+    std::pair<WFSIDCCHIPIO*, PCSC::Status> transmit(const WFSIDCCHIPIO* input) const;
     /// Выполняет реинициализацию чипа.
     std::pair<WFSIDCCHIPPOWEROUT*, PCSC::Status> reset(XFS::ResetAction action) const;
 public:// Служебные функции

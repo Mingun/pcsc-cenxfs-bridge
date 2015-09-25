@@ -328,7 +328,7 @@ WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) 
     }
     return result;
 }
-std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(WFSIDCCHIPIO* input) const {
+std::pair<WFSIDCCHIPIO*, PCSC::Status> Service::transmit(const WFSIDCCHIPIO* input) const {
     assert(input != NULL && "Service::transmit: No input from XFS subsystem");
     assert(hCard != 0 && "Service::transmit: No card in reader");
 

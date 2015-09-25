@@ -434,7 +434,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             if (lpCmdData == NULL) {
                 return WFS_ERR_INVALID_POINTER;
             }
-            WFSIDCCHIPIO* data = (WFSIDCCHIPIO*)lpCmdData;
+            const WFSIDCCHIPIO* data = (const WFSIDCCHIPIO*)lpCmdData;
             std::pair<WFSIDCCHIPIO*, PCSC::Status> result = pcsc.get(hService).transmit(data);
             XFS::Result(ReqID, hService, result.second).attach(result.first).send(hWnd, WFS_EXECUTE_COMPLETE);
             return WFS_SUCCESS;
