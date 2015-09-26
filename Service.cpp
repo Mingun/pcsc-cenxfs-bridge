@@ -90,7 +90,6 @@ Service::Service(Manager& pcsc, HSERVICE hService, const Settings& settings)
     , mSettings(settings)
     , mInited(false)
 {
-    XFS::Logger() << "Settings: " << settings.toJSONString();
 }
 Service::~Service() {
     if (hCard != 0) {

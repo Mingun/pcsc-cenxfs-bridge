@@ -109,7 +109,12 @@ Settings::Settings(const char* serviceName, int traceLevel)
     // HKEY_LOCAL_MACHINE\SOFTWARE\XFS\SERVICE_PROVIDERS\
     // HKEY root = WFS_CFG_HKEY_XFS_ROOT;
     HKEY root = WFS_CFG_USER_DEFAULT_XFS_ROOT;// HKEY_USERS\.DEFAULT\XFS
-    providerName = RegKey(root, "LOGICAL_SERVICES").child((LPSTR)serviceName).value("Provider");
+    providerName = RegKey(root, "LOGICAL_SERVICES").child(serviceName).value("Provider");
+
+    reread();
+}
+void Settings::reread() {
+    HKEY root = WFS_CFG_USER_DEFAULT_XFS_ROOT;// HKEY_USERS\.DEFAULT\XFS
 
     RegKey pcscSettings = RegKey(root, "SERVICE_PROVIDERS").child(providerName.c_str());
     readerName = pcscSettings.value("ReaderName");
@@ -124,6 +129,8 @@ Settings::Settings(const char* serviceName, int traceLevel)
     RegKey track2Settings = workaroundSettings.child("Track2");
     workarounds.track2.report = track2Settings.dwValue("Report") != 0;
     workarounds.track2.value = track2Settings.value();
+
+    XFS::Logger() << "Settings::reread: Readed new settings: " << toJSONString();
 }
 std::string Settings::toJSONString() const {
     std::stringstream ss;

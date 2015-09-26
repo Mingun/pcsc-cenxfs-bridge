@@ -67,9 +67,10 @@ public:
     public:
         Workarounds() : correctChipIO(false) {}
     };
-public:
-    /// Название самого провайдера.
+public:// Не перечитываемые настройки.
+    /// Название самого провайдера. Не меняется после создания настроек.
     std::string providerName;
+public:// Перечитываемые функцией reread() настройки
     /// Название считывателя, с которым должен работать провайдер.
     std::string readerName;
     /// Уровень подробности выводимых сообщений, чем выше, тем подробнее.
@@ -85,6 +86,8 @@ public:
 public:
     Settings(const char* serviceName, int traceLevel);
 
+    /// Перечитывает все настройки сервис-провайдера, кроме названия сервис-провайдера.
+    void reread();
     std::string toJSONString() const;
 };
 
