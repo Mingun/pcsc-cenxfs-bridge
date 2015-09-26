@@ -18,16 +18,14 @@ void Manager::addTask(const Task::Ptr& task) {
     if (tasks.addTask(task)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
-        PCSC::Status st = SCardCancel(context());
-        XFS::Logger() << "SCardCancel(addTask): " << st;
+        readerChangesMonitor.cancel("Manager::addTask");
     }
 }
 bool Manager::cancelTask(HSERVICE hService, REQUESTID ReqID) {
     if (tasks.cancelTask(hService, ReqID)) {
         // Прерываем ожидание потока на SCardGetStatusChange, т.к. ожидать теперь нужно
         // до нового таймаута. Ожидание с новым таймаутом начнется автоматически.
-        PCSC::Status st = SCardCancel(context());
-        XFS::Logger() << "SCardCancel(cancelTask): " << st;
+        readerChangesMonitor.cancel("Manager::cancelTask");
         return true;
     }
     return false;

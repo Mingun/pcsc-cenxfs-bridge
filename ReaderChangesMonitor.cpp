@@ -17,7 +17,7 @@ ReaderChangesMonitor::~ReaderChangesMonitor() {
     // Запрашиваем остановку потока.
     stopRequested = true;
     // Сигнализируем о том, что необходимо прервать ожидание
-    SCardCancel(manager.context());
+    cancel("ReaderChangesMonitor::~ReaderChangesMonitor");
     // Ожидаем, пока дойдет.
     waitChangesThread->join();
 }
@@ -131,4 +131,9 @@ bool ReaderChangesMonitor::waitChanges(std::vector<SCARD_READERSTATE>& readers) 
         first = false;
     }
     return readersChanged;
+}
+void ReaderChangesMonitor::cancel(const char* reason) const {
+    // Сигнализируем о том, что необходимо прервать ожидание
+    PCSC::Status st = SCardCancel(manager.context());
+    XFS::Logger() << "SCardCancel[" << reason << "](hContext=" << manager.context() << ") = " << st;
 }
