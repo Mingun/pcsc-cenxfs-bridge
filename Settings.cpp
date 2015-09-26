@@ -112,15 +112,16 @@ Settings::Settings(const char* serviceName, int traceLevel)
 
     RegKey pcscSettings = RegKey(root, "SERVICE_PROVIDERS").child(providerName.c_str());
     readerName = pcscSettings.value("ReaderName");
-
-    RegKey track2Settings = pcscSettings.child("Track2");
-    track2.report = track2Settings.dwValue("Report") != 0;
-    track2.value = track2Settings.value();
+    traceLevel = pcscSettings.dwValue("TraceLevel");
 
     // Настройки обходов различных проблем
     RegKey workaroundSettings = pcscSettings.child("Workarounds");
     workarounds.correctChipIO = workaroundSettings.dwValue("CorrectChipIO") != 0;
     workarounds.canEject = workaroundSettings.dwValue("CanEject") != 0;
+
+    RegKey track2Settings = workaroundSettings.child("Track2");
+    workarounds.track2.report = track2Settings.dwValue("Report") != 0;
+    workarounds.track2.value = track2Settings.value();
 }
 std::string Settings::toJSONString() const {
     std::stringstream ss;
@@ -128,10 +129,10 @@ std::string Settings::toJSONString() const {
     ss << "\tProviderName: " << providerName << ",\n";
     ss << "\tReaderName: " << readerName << ",\n";
     ss << "\tTraceLevel: " << traceLevel << ",\n";
-    ss << "\tTrack2.Report: " << std::boolalpha << track2.report << ",\n";
-    ss << "\tTrack2.Value: " << track2.value << ",\n";
     ss << "\tWorkarounds.CorrectChipIO: " << std::boolalpha << workarounds.correctChipIO << ",\n";
     ss << "\tWorkarounds.CanEject: " << std::boolalpha << workarounds.canEject << ",\n";
+    ss << "\tWorkarounds.Track2.Report: " << std::boolalpha << workarounds.track2.report << ",\n";
+    ss << "\tWorkarounds.Track2.Value: " << workarounds.track2.value << ",\n";
     ss << '}';
     return ss.str();
 }

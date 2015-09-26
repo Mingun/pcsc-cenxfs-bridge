@@ -200,7 +200,7 @@ std::pair<WFSIDCCAPS*, PCSC::Status> Service::getCaps() const {
     // Какие треки могут быть прочитаны -- никакие, только чип.
     // Так как Kalignite не желает работать, если считыватель не умеет читать хоть какой-то
     // трек, то сообщаем, что умеем читать самый востребованный, чтобы удовлетворить Kaliginte.
-    lpCaps->fwReadTracks = mSettings.track2.report ? WFS_IDC_TRACK2 : WFS_IDC_NOTSUPP;
+    lpCaps->fwReadTracks = mSettings.workarounds.track2.report ? WFS_IDC_TRACK2 : WFS_IDC_NOTSUPP;
     // Какие треки могут быть записаны -- никакие, только чип.
     lpCaps->fwWriteTracks = WFS_IDC_NOTSUPP;
     // Виды поддерживаемых устройством протоколов -- все возможные.
@@ -280,10 +280,10 @@ WFSIDCCARDDATA* Service::readChip() const {
 }
 WFSIDCCARDDATA* Service::readTrack2() const {
     assert(hCard != 0 && "Attempt read TRACK2 when card not in the reader");
-    assert(mSettings.track2.report == true && "Attempt read TRACK2 when setting Track2.Report is false");
+    assert(mSettings.workarounds.track2.report == true && "Attempt read TRACK2 when setting Workarounds.Track2.Report is false");
 
     {XFS::Logger() << "Read track2 (hCard=" << hCard << ')'; }
-    std::size_t size = mSettings.track2.value.size();
+    std::size_t size = mSettings.workarounds.track2.value.size();
     //TODO: Возможно, необходимо выделять память через WFSAllocateMore
     WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
     data->wDataSource  = WFS_IDC_TRACK2;
@@ -291,7 +291,7 @@ WFSIDCCARDDATA* Service::readTrack2() const {
     if (size != 0) {
         data->ulDataLength = size;
         data->lpbData      = XFS::allocArr<BYTE>(size);
-        std::memcpy(data->lpbData, mSettings.track2.value.c_str(), size);
+        std::memcpy(data->lpbData, mSettings.workarounds.track2.value.c_str(), size);
     }
     return data;
 }
@@ -314,7 +314,7 @@ WFSIDCCARDDATA** Service::wrap(WFSIDCCARDDATA* iccData, XFS::ReadFlags forRead) 
             // Kalignite требует, чтобы track2 мог читаться устройством, иначе он падает.
             // Поэтому, если такая информация запрошена и у нас в настройках сказано ее отдать,
             // то эмулируем ее наличие.
-            if (flag == WFS_IDC_TRACK2 && mSettings.track2.report) {
+            if (flag == WFS_IDC_TRACK2 && mSettings.workarounds.track2.report) {
                 result[j] = readTrack2();
             } else {
                 //TODO: Возможно, необходимо выделять память через WFSAllocateMore
