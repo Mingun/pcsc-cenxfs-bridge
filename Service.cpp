@@ -100,7 +100,8 @@ Service::~Service() {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PCSC::Status Service::open(const char* readerName) {
     assert(hCard == 0 && "Must open only one card at one service");
-    PCSC::Status st = SCardConnect(pcsc.context(), readerName, SCARD_SHARE_SHARED,
+    PCSC::Status st = SCardConnect(pcsc.context(), readerName,
+        mSettings.exclusive ? SCARD_SHARE_EXCLUSIVE : SCARD_SHARE_SHARED,
         // У нас нет предпочитаемого протокола, работаем с тем, что дают
         SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
         // Получаем хендл карты и выбранный протокол.
@@ -433,7 +434,8 @@ std::pair<WFSIDCCHIPPOWEROUT*, PCSC::Status> Service::reset(XFS::ResetAction act
     assert(hCard != 0 && "Service::reset: No card in the reader");
 
     PCSC::Status st = SCardReconnect(
-        hCard, SCARD_SHARE_SHARED,
+        hCard,
+        mSettings.exclusive ? SCARD_SHARE_EXCLUSIVE : SCARD_SHARE_SHARED,
         // Текущий активный протокол должен быть в числе запрошенных, иначе
         // функция вернет ошибку.
         mActiveProtocol.value() | SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,

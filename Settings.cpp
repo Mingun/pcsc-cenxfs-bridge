@@ -103,6 +103,7 @@ public:
 
 Settings::Settings(const char* serviceName, int traceLevel)
     : traceLevel(traceLevel)
+    , exclusive(false)
 {
     // У Калигнайта под данным корнем не появляется провайдера, если он в
     // HKEY_LOCAL_MACHINE\SOFTWARE\XFS\SERVICE_PROVIDERS\
@@ -113,6 +114,7 @@ Settings::Settings(const char* serviceName, int traceLevel)
     RegKey pcscSettings = RegKey(root, "SERVICE_PROVIDERS").child(providerName.c_str());
     readerName = pcscSettings.value("ReaderName");
     traceLevel = pcscSettings.dwValue("TraceLevel");
+    exclusive  = pcscSettings.dwValue("Exclusive") != 0;
 
     // Настройки обходов различных проблем
     RegKey workaroundSettings = pcscSettings.child("Workarounds");
@@ -129,6 +131,7 @@ std::string Settings::toJSONString() const {
     ss << "\tProviderName: " << providerName << ",\n";
     ss << "\tReaderName: " << readerName << ",\n";
     ss << "\tTraceLevel: " << traceLevel << ",\n";
+    ss << "\tExclusive: " << std::boolalpha << exclusive << ",\n";
     ss << "\tWorkarounds.CorrectChipIO: " << std::boolalpha << workarounds.correctChipIO << ",\n";
     ss << "\tWorkarounds.CanEject: " << std::boolalpha << workarounds.canEject << ",\n";
     ss << "\tWorkarounds.Track2.Report: " << std::boolalpha << workarounds.track2.report << ",\n";
