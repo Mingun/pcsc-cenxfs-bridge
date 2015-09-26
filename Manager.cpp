@@ -15,11 +15,11 @@ Service& Manager::create(HSERVICE hService, const Settings& settings) {
     return result;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void Manager::notifyChanges(const SCARD_READERSTATE& state) {
+void Manager::notifyChanges(const SCARD_READERSTATE& state, bool deviceChange) {
     // Сначала уведомляем подписанных слушателей об изменениях, и только затем
     // пытаемся завершить задачи.
-    services.notifyChanges(state);
-    tasks.notifyChanges(state);
+    services.notifyChanges(state, deviceChange);
+    tasks.notifyChanges(state, deviceChange);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Manager::addTask(const Task::Ptr& task) {

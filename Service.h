@@ -65,7 +65,7 @@ public:
     @param state
         Информация о текущем состоянии изменившегося считывателя.
     */
-    void notify(const SCARD_READERSTATE& state);
+    void notify(const SCARD_READERSTATE& state, bool deviceChange);
 public:// Функции, вызываемые в WFPGetInfo
     std::pair<WFSIDCSTATUS*, PCSC::Status> getStatus();
     std::pair<WFSIDCCAPS*, PCSC::Status> getCaps() const;

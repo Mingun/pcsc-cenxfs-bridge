@@ -43,7 +43,11 @@ public:
     CardReadTask(bc::steady_clock::time_point deadline, Service& service,
                 HWND hWnd, REQUESTID ReqID, XFS::ReadFlags flags, std::string readerName
     ) : Task(deadline, service, hWnd, ReqID), mFlags(flags), mReaderName(readerName) {}
-    virtual bool match(const SCARD_READERSTATE& state) const {
+    virtual bool match(const SCARD_READERSTATE& state, bool deviceChange) const {
+        // Изменения в количестве считывателей нас не интересуют.
+        if (deviceChange) {
+            return false;
+        }
         // Нас могут интересовать события только от конкретного считывателя.
         if (!mReaderName.empty() && mReaderName != state.szReader) {
             return false;
@@ -142,7 +146,11 @@ PCSC::Status Service::unlock() {
     return st;
 }
 /// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
-void Service::notify(const SCARD_READERSTATE& state) {
+void Service::notify(const SCARD_READERSTATE& state, bool deviceChange) {
+    // Изменения в количестве считывателей нас не интересуют.
+    if (deviceChange) {
+        return;
+    }
     // Один сервис может наблюдать только за одним считывателем за раз.
     // В зависимости от настроек, это может быть как один и тот же считыватель,
     // так и тот считыватель, в который первым была вставлена карточка. Поэтому,

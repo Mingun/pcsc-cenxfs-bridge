@@ -57,13 +57,21 @@ public:
 public:
     /** Проверяет, является ли указанное событие тем, что ожидает данная задача.
         Если функция вернет `true`, та данная задача будет считаться завершенной
-        и будет исключена ис списка зарегистрированных задач. Если зачате требуется
+        и будет исключена из списка зарегистрированных задач. Если задаче требуется
         выполнить какие-то действия в случае успешного завершения, это надо сделать
         здесь.
+
     @param state
         Данные изменившегося состояния.
+    @param deviceChange
+        Если `true`, то изменение относится к изменению количества устройств, а не
+        карточки в устройстве.
+
+    @return
+        `true`, если задача дождалась интересующего ее события и должна быть удалена
+        из очереди задач, иначе `false`.
     */
-    virtual bool match(const SCARD_READERSTATE& state) const = 0;
+    virtual bool match(const SCARD_READERSTATE& state, bool deviceChange) const = 0;
     /// Уведомляет XFS-слушателя о завершении ожидания.
     /// @param result Код ответа для завершения.
     void complete(HRESULT result) const;
@@ -138,6 +146,6 @@ public:
         Состояние изменившегося считывателя, в том числе это может быть изменение
         количества считывателей.
     */
-    void notifyChanges(const SCARD_READERSTATE& state);
+    void notifyChanges(const SCARD_READERSTATE& state, bool deviceChange);
 };
 #endif PCSC_CENXFS_BRIDGE_Task_H

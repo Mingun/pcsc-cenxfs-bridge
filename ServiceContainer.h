@@ -40,7 +40,7 @@ public:// Подписка на события и генерация событ�
     bool removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD dwEventClass);
 public:
     /// Уведомляет все сервисы о произошедших изменениях со считывателями.
-    void notifyChanges(const SCARD_READERSTATE& state);
+    void notifyChanges(const SCARD_READERSTATE& state, bool deviceChange);
 };
 
 #endif // PCSC_CENXFS_BRIDGE_ServiceContainer_H

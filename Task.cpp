@@ -87,11 +87,11 @@ void TaskContainer::processTimeouts(bc::steady_clock::time_point now) {
     byDeadline.erase(begin, it);
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void TaskContainer::notifyChanges(const SCARD_READERSTATE& state) {
+void TaskContainer::notifyChanges(const SCARD_READERSTATE& state, bool deviceChange) {
     boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
     for (TaskList::iterator it = tasks.begin(); it != tasks.end();) {
         // Если задача ожидала этого события, то удаляем ее из списка.
-        if ((*it)->match(state)) {
+        if ((*it)->match(state, deviceChange)) {
             it = tasks.erase(it);
             continue;
         }

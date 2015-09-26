@@ -56,9 +56,9 @@ bool ServiceContainer::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD d
     return true;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void ServiceContainer::notifyChanges(const SCARD_READERSTATE& state) {
+void ServiceContainer::notifyChanges(const SCARD_READERSTATE& state, bool deviceChange) {
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
         assert(it->second != NULL && "Internal error: no service data while do notification");
-        it->second->notify(state);
+        it->second->notify(state, deviceChange);
     }
 }

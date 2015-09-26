@@ -124,7 +124,7 @@ bool ReaderChangesMonitor::waitChanges(std::vector<SCARD_READERSTATE>& readers) 
             if (first) {
                 readersChanged = true;
             }
-            manager.notifyChanges(*it);
+            manager.notifyChanges(*it, first);
         }
         // Cообщаем PC/SC, что мы знаем текущее состояние
         it->dwCurrentState = it->dwEventState;

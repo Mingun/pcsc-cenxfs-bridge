@@ -88,7 +88,7 @@ private:// Функции для использования ReaderChangesMonitor
     /// @copydoc TaskContainer::processTimeouts
     inline void processTimeouts(boost::chrono::steady_clock::time_point now) { tasks.processTimeouts(now); }
     /// @copydoc TaskContainer::notifyChanges
-    void notifyChanges(const SCARD_READERSTATE& state);
+    void notifyChanges(const SCARD_READERSTATE& state, bool deviceChange);
 };
 
 #endif // PCSC_CENXFS_BRIDGE_Manager_H
