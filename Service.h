@@ -33,8 +33,15 @@ class Service : public EventNotifier {
     SCARDHANDLE hCard;
     /// Протокол, по которому работает карта.
     PCSC::ProtocolTypes mActiveProtocol;
+    /// Имя считывателя, с которым работает данный сервис. Если не пустое, то сервис
+    /// будет получать уведомления об активности только указанного считывателя.
+    std::string mBindedReaderName;
     /// Настройки данного сервиса.
     Settings mSettings;
+    /// Флаг, отвечающий за то, что после создания сервиса он уже узнал текущее
+    /// состояние считывателей. При создании сервиса данный флаг выставлен в `false`,
+    /// а при первом уведомлении о считывателях он устанавливается в `true`.
+    bool mInited;
     // Данный класс будет создавать объекты данного класса, вызывая конструктор.
     friend class ServiceContainer;
 private:
@@ -47,7 +54,7 @@ private:
 public:
     ~Service();
 
-    PCSC::Status open();
+    PCSC::Status open(const char* readerName);
     PCSC::Status close();
 
     PCSC::Status lock();

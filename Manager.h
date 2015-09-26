@@ -54,9 +54,7 @@ public:// Управление сервисами
     /** @return true, если в менеджере не зарегистрировано ни одного сервиса. */
     inline bool isEmpty() const { return services.isEmpty(); }
 
-    inline Service& create(HSERVICE hService, const Settings& settings) {
-        return services.create(*this, hService, settings);
-    }
+    Service& create(HSERVICE hService, const Settings& settings);
     inline Service& get(HSERVICE hService) { return services.get(hService); }
     inline void remove(HSERVICE hService) { services.remove(hService); }
 public:// Подписка на события и генерация событий

@@ -7,6 +7,14 @@
 
 Manager::Manager() : readerChangesMonitor(*this) {}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Service& Manager::create(HSERVICE hService, const Settings& settings) {
+    Service& result = services.create(*this, hService, settings);
+    // Прерываем ожидание потока на SCardGetStatusChange, т.к. необходимо доставить
+    // новому сервису информацию о всех существующих в данный момент считывателях.
+    readerChangesMonitor.cancel("Manager::create");
+    return result;
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Manager::notifyChanges(const SCARD_READERSTATE& state) {
     // Сначала уведомляем подписанных слушателей об изменениях, и только затем
     // пытаемся завершить задачи.
