@@ -14,6 +14,8 @@
 
 // PC/CS API -- для SCARD_READERSTATE
 #include <winscard.h>
+// Для GetComputerNameEx
+#include <winbase.h>
 
 namespace PCSC {
     /// Базовый класс для всех событий, генерируемых подсистемой PC/SC и транслируемых в XFS.
@@ -24,7 +26,7 @@ namespace PCSC {
         Event(const Service& service) : mService(service) {}
 
         inline XFS::Result success() const {
-            // TODO: Возможно, сюда нужно передавать конкретный трекинговый номер
+            // Поля ReqID и hResult не нужны для сервисных событий
             return XFS::Result(0, mService.handle(), WFS_SUCCESS);
         }
     };
@@ -60,8 +62,13 @@ namespace PCSC {
             WFSDEVSTATUS* status = XFS::alloc<WFSDEVSTATUS>();
             // Имя физичеcкого устройства, чье состояние изменилось
             status->lpszPhysicalName = (LPSTR)XFS::Str(state.szReader).begin();
+
+            DWORD len = 0;
+            // Сначала получаем размер буфера (включает размер для завершающего 0)
+            GetComputerNameEx(ComputerNameNetBIOS, NULL, &len);
             // Рабочая станция, на которой запущен сервис.
-            status->lpszWorkstationName = NULL;//TODO: Заполнить имя рабочей станции.
+            status->lpszWorkstationName = XFS::allocArr<CHAR>(len);
+            GetComputerNameEx(ComputerNameNetBIOS, status->lpszWorkstationName, &len);
             status->dwState = PCSC::ReaderState(state.dwEventState).translate();
             return success().attach(status);
         }
