@@ -48,7 +48,7 @@ public:
         if (!mReaderName.empty() && mReaderName != state.szReader) {
             return false;
         }
-        DWORD added = state.dwCurrentState ^ state.dwEventState;
+        DWORD added = (state.dwCurrentState ^ state.dwEventState) & state.dwEventState;
         // Если в указанном бите есть изменения и он был установлен, генерируем событие вставки карты.
         if (added & SCARD_STATE_PRESENT) {
             {XFS::Logger() << "Card inserted to reader '" << state.szReader << "', read flags: " << mFlags; }
