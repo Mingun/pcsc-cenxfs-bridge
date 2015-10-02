@@ -33,8 +33,10 @@ class Service : public EventNotifier {
     SCARDHANDLE hCard;
     /// Протокол, по которому работает карта.
     PCSC::ProtocolTypes mActiveProtocol;
-    /// Имя считывателя, с которым работает данный сервис. Если не пустое, то сервис
-    /// будет получать уведомления об активности только указанного считывателя.
+    /// Имя считывателя, уведомления от которого обрабатываются данным сервис-провайдером.
+    /// Может либо быть явно заданным в настройках, либо заполнятся в момент обнаружения
+    /// карточки в любом из доступных считывателей. В последнем случае, до тех пор, пока
+    /// карточка не будет вынута, все события от прочих считывателей будут игнорироваться.
     std::string mBindedReaderName;
     /// Настройки данного сервиса.
     Settings mSettings;
@@ -66,6 +68,8 @@ public:
         Информация о текущем состоянии изменившегося считывателя.
     */
     void notify(const SCARD_READERSTATE& state, bool deviceChange);
+    /** Проверяет, что сервис ожидает сообщения от данного считывателя. */
+    bool match(const SCARD_READERSTATE& state, bool deviceChange);
 public:// Функции, вызываемые в WFPGetInfo
     std::pair<WFSIDCSTATUS*, PCSC::Status> getStatus();
     std::pair<WFSIDCCAPS*, PCSC::Status> getCaps() const;
@@ -114,6 +118,7 @@ public:// Функции, вызываемые в WFPExecute
 public:// Служебные функции
     inline HSERVICE handle() const { return hService; }
     inline const Settings& settings() const { return mSettings; }
+    inline const std::string& bindedReader() const { return mBindedReaderName; }
 };
 
 #endif // PCSC_CENXFS_BRIDGE_Service_H

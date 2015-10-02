@@ -37,25 +37,21 @@ public:
 class CardReadTask : public Task {
     /// Данные, которые должны быть прочитаны.
     XFS::ReadFlags mFlags;
-    /// Если не пустое, то карточка должна быть вставлена в указанный считыватель
-    std::string mReaderName;
 public:
     CardReadTask(bc::steady_clock::time_point deadline, Service& service,
-                HWND hWnd, REQUESTID ReqID, XFS::ReadFlags flags, std::string readerName
-    ) : Task(deadline, service, hWnd, ReqID), mFlags(flags), mReaderName(readerName) {}
+                HWND hWnd, REQUESTID ReqID, XFS::ReadFlags flags
+    ) : Task(deadline, service, hWnd, ReqID), mFlags(flags) {
+        XFS::Logger() << "Service " << service.handle() << ": Listen reader(s), read flags: " << flags;
+    }
     virtual bool match(const SCARD_READERSTATE& state, bool deviceChange) const {
-        // Изменения в количестве считывателей нас не интересуют.
-        if (deviceChange) {
-            return false;
-        }
-        // Нас могут интересовать события только от конкретного считывателя.
-        if (!mReaderName.empty() && mReaderName != state.szReader) {
+        // Если изменения нас не интересуют, выходим.
+        if (!mService.match(state, deviceChange)) {
             return false;
         }
         DWORD added = (state.dwCurrentState ^ state.dwEventState) & state.dwEventState;
         // Если в указанном бите есть изменения и он был установлен, генерируем событие вставки карты.
         if (added & SCARD_STATE_PRESENT) {
-            {XFS::Logger() << "Card inserted to reader '" << state.szReader << "', read flags: " << mFlags; }
+            {XFS::Logger() << "Service " << mService.handle() << ": Card inserted to reader '" << state.szReader << "', read flags: " << mFlags; }
 
             WFSIDCCARDDATA** result = mService.wrap(translate(state), mFlags);
             // Уведомляем поставщика задачи, что она выполнена.
@@ -66,7 +62,7 @@ public:
         return false;
     }
 private:
-    static WFSIDCCARDDATA* translate(const SCARD_READERSTATE& state) {
+    WFSIDCCARDDATA* translate(const SCARD_READERSTATE& state) const {
         //TODO: Возможно, необходимо выделять память через WFSAllocateMore
         WFSIDCCARDDATA* data = XFS::alloc<WFSIDCCARDDATA>();
         // data->lpbData содержит ATR (Answer To Reset), прочитанный с чипа
@@ -75,7 +71,7 @@ private:
         data->ulDataLength = state.cbAtr;
         data->lpbData = XFS::allocArr<BYTE>(state.cbAtr);
         std::memcpy(data->lpbData, state.rgbAtr, state.cbAtr);
-        {XFS::Logger() << "atr=" << Hex(data->lpbData, data->ulDataLength);}
+        {XFS::Logger() << "Service " << mService.handle() << ": ATR=" << Hex(data->lpbData, data->ulDataLength);}
         return data;
     }
 };
@@ -115,6 +111,7 @@ PCSC::Status Service::open(const char* readerName) {
     if (st) {
         // Если открытие совершилось корректно, то запоминаем имя текущего считывателя.
         mBindedReaderName = readerName;
+        XFS::Logger() << "Service " << handle() << " binded to reader '" << mBindedReaderName << "'";
     }
     return st;
 }
@@ -145,18 +142,25 @@ PCSC::Status Service::unlock() {
 
     return st;
 }
-/// Уведомляет всех слушателей обо всех произошедших изменениях со считывателями.
-void Service::notify(const SCARD_READERSTATE& state, bool deviceChange) {
+bool Service::match(const SCARD_READERSTATE& state, bool deviceChange) {
     // Изменения в количестве считывателей нас не интересуют.
     if (deviceChange) {
-        return;
+        return false;
     }
     // Один сервис может наблюдать только за одним считывателем за раз.
     // В зависимости от настроек, это может быть как один и тот же считыватель,
     // так и тот считыватель, в который первым была вставлена карточка. Поэтому,
     // если в данный момент мы уже работаем с какой-то карточкой, то игнорируем все
     // уведомления от остальных считывателей.
-    if (mBindedReaderName != state.szReader) {
+    if (!mBindedReaderName.empty() && mBindedReaderName != state.szReader) {
+        return false;
+    }
+    return true;
+}
+
+void Service::notify(const SCARD_READERSTATE& state, bool deviceChange) {
+    // Если изменения нас не интересуют, выходим.
+    if (!match(state, deviceChange)) {
         return;
     }
     DWORD added = (state.dwCurrentState ^ state.dwEventState) & state.dwEventState;
@@ -282,12 +286,7 @@ void Service::asyncRead(DWORD dwTimeOut, HWND hWnd, REQUESTID ReqID, XFS::ReadFl
     if (hCard == 0) {
         namespace bc = boost::chrono;
         bc::steady_clock::time_point now = bc::steady_clock::now();
-        pcsc.addTask(Task::Ptr(new CardReadTask(
-            now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID, forRead,
-            // Если сервис привязан к конкретному считывателю, то здесь будет непустая строка
-            // и задача будет ожидать вставки карты тольько в указанный считыватель.
-            mBindedReaderName
-        )));
+        pcsc.addTask(Task::Ptr(new CardReadTask(now + bc::milliseconds(dwTimeOut), *this, hWnd, ReqID, forRead)));
     } else {
         WFSIDCCARDDATA** result = wrap(readChip(), forRead);
         // Уведомляем поставщика задачи, что она выполнена.
