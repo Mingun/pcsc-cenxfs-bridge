@@ -15,11 +15,14 @@ PC/SC-CEN/XFS-bridge
 1. Boost (должна быть прописана переменная окружения %BOOST_ROOT%, указывающая на корневой каталог
 boost-а, т.е. каталог, содержащий папки libs, doc, stage и т.п. предполагается, что boost собран в
 каталог по умолчанию, коим является stage)
-    1. `boost.chrono`
-    2. `boost.thread`
-    3. `boost.date_time` (зависимость от `boost.thread`)
-2. [XFS SDK][1] -- взять можно у проекта [freexfs][4]. Там же содержится и документация. Также можно
-взять на официальном FTP-сайте, но его достаточно трудно отыскать -- не помню, как я на него вышел.
+  1. `boost.chrono`
+  2. `boost.thread`
+  3. `boost.date_time` (зависимость от `boost.thread`)
+2.
+  1. [XFS SDK][1] -- взять можно у проекта [freexfs][4]. Там же содержится и документация.
+  2. Также можно взять на официальном FTP-сайте, но его достаточно трудно отыскать. На официальном
+     сайте группы CEN/XFS найти ссылки на документацию не удалось, к счастью, пользователь *winner13*
+     в форума [bankomatchik.ru][6] каким-то чудом отыскал [FTP-ссылку][7].
 3. Подсистема PC/SC являтется частью SDK Windows.
 
 Сборка
@@ -85,3 +88,5 @@ XFS, что все события должны быть испущены до т
 [3]: https://code.google.com/p/freexfs/downloads/detail?name=XFS%20SDK3.0.rar&can=2&q=
 [4]: https://code.google.com/p/freexfs/
 [5]: http://www.hidglobal.com/products/readers/omnikey/3121
+[6]: http://bankomatchik.ru/forums/topic/4654#p65827
+[7]: ftp://ftp.cenorm.be/PUBLIC/CWAs/other/WS-XFS/SDK%20XFS3/sdk303.zip
