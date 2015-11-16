@@ -1,9 +1,0 @@
-Windows Registry Editor Version 5.00
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\XFS\SERVICE_PROVIDERS\ACS ACR38USB 0]
-"Class"="IDC"
-"DLLName"="C:\\Projects\\banks\\pcsc-cenxfs-bridge\\PCSCspi.dll"
-"TraceLevel"=dword:000a001f
-"Vendor_name"="Mingun"
-"Version"="0.0.0.1"
-"ReportReadTrack2"=dword:00000001
