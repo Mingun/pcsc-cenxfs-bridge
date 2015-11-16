@@ -188,8 +188,8 @@ void Service::notify(const SCARD_READERSTATE& state, bool deviceChange) {
         }
     }
     if (forCheck & SCARD_STATE_PRESENT) {
-        EventNotifier::notify(WFS_EXECUTE_EVENT, PCSC::CardInserted(*this));
         open(state.szReader);
+        EventNotifier::notify(WFS_EXECUTE_EVENT, PCSC::CardInserted(*this));
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
