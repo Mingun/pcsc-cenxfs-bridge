@@ -57,6 +57,7 @@ bool ServiceContainer::removeSubscriber(HSERVICE hService, HWND hWndReg, DWORD d
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void ServiceContainer::notifyChanges(const SCARD_READERSTATE& state, bool deviceChange) {
+    {XFS::Logger() << "ServiceContainer::notifyChanges";}
     for (ServiceMap::const_iterator it = services.begin(); it != services.end(); ++it) {
         assert(it->second != NULL && "Internal error: no service data while do notification");
         it->second->notify(state, deviceChange);

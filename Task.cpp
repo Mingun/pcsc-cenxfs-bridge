@@ -88,6 +88,7 @@ void TaskContainer::processTimeouts(bc::steady_clock::time_point now) {
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void TaskContainer::notifyChanges(const SCARD_READERSTATE& state, bool deviceChange) {
+    {XFS::Logger() << "TaskContainer::notifyChanges";}
     boost::lock_guard<boost::recursive_mutex> lock(tasksMutex);
     for (TaskList::iterator it = tasks.begin(); it != tasks.end();) {
         // Если задача ожидала этого события, то удаляем ее из списка.
