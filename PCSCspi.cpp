@@ -24,9 +24,9 @@
 #pragma comment(lib, "winscard.lib")
 // Линкуемся с библиотекой реализации XFS
 #pragma comment(lib, "msxfs.lib")
-// Линкуемся с библиотекой поддержки конфигураионных функций XFS
+// Линкуемся с библиотекой поддержки конфигурационных функций XFS
 #pragma comment(lib, "xfs_conf.lib")
-// Линкуемся с библитекой для использования оконных функций (PostMessage)
+// Линкуемся с библиотекой для использования оконных функций (PostMessage)
 #pragma comment(lib, "user32.lib")
 
 #define MAKE_VERSION(major, minor) (((major) << 8) | (minor))
@@ -444,7 +444,7 @@ HRESULT SPI_API WFPExecute(HSERVICE hService, DWORD dwCommand, LPVOID lpCmdData,
             // Битовая маска. NULL означает, что провайдер сам решает, что делать.
             WORD wResetIn = lpCmdData ? *((WORD*)lpCmdData) : WFS_IDC_NOACTION;
             //TODO: Реализовать команду WFS_CMD_IDC_RESET
-            return WFS_ERR_INTERNAL_ERROR;
+            return WFS_ERR_UNSUPP_COMMAND;
         }
         case WFS_CMD_IDC_CHIP_POWER: {
             if (lpCmdData == NULL) {
